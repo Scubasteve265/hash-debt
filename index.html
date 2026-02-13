@@ -52,18 +52,17 @@
     'use strict';
 
     // ========================================================================
-    // COLORS - Clean, modern, neon
+    // COLORS
     // ========================================================================
     const COLORS = {
         bg: '#0a0a0a',
         bgCard: '#141418',
-        bgCardHover: '#1a1a20',
-        primary: '#f7931a',      // VIG orange
-        primaryGlow: 'rgba(247, 147, 26, 0.3)',
+        primary: '#f7931a',
+        primaryGlow: 'rgba(247, 147, 26, 0.4)',
         success: '#10b981',
         successGlow: 'rgba(16, 185, 129, 0.3)',
         danger: '#ef4444',
-        dangerGlow: 'rgba(239, 68, 68, 0.3)',
+        dangerGlow: 'rgba(239, 68, 68, 0.4)',
         warning: '#f59e0b',
         purple: '#8b5cf6',
         text: '#ffffff',
@@ -73,59 +72,50 @@
     };
 
     const SHARKS = [
-        { name: 'Vinnie', baseDemand: 25, interestMult: 1.12 },
-        { name: 'Marco', baseDemand: 40, interestMult: 1.18 },
-        { name: 'Big Tony', baseDemand: 60, interestMult: 1.15 },
-        { name: 'The Butcher', baseDemand: 80, interestMult: 1.25 },
-        { name: 'Sal', baseDemand: 50, interestMult: 1.20 },
-        { name: 'Knuckles', baseDemand: 100, interestMult: 1.30 }
+        { name: 'Vinnie', loanAmount: 50, multiplier: 1.5, speedBoost: 1.15, baseDemand: 20 },
+        { name: 'Marco', loanAmount: 80, multiplier: 2.0, speedBoost: 1.25, baseDemand: 35 },
+        { name: 'Big Tony', loanAmount: 120, multiplier: 2.5, speedBoost: 1.35, baseDemand: 55 },
+        { name: 'The Butcher', loanAmount: 200, multiplier: 3.5, speedBoost: 1.5, baseDemand: 90 },
+        { name: 'Knuckles', loanAmount: 300, multiplier: 5.0, speedBoost: 1.7, baseDemand: 150 }
     ];
 
     // ========================================================================
     // STATE
     // ========================================================================
-    const GamePhase = {
-        MENU: 'menu',
-        MORNING: 'morning',
-        MINING: 'mining',
-        BLOCK_CRACKED: 'block_cracked',
-        CRASHED: 'crashed',
-        PAYDAY: 'payday',
-        GAMEOVER: 'gameover'
+    const Phase = {
+        MENU: 0,
+        MINING: 1,
+        PAYDAY: 2,
+        GAMEOVER: 3
     };
 
     const state = {
-        phase: GamePhase.MENU,
+        phase: Phase.MENU,
         day: 1,
         cash: 0,
         cashDisplay: 0,
-        vig: 0,
 
         // Ring
         angle: 0,
+        direction: 1,  // 1 = clockwise, -1 = counter
+        baseSpeed: 0.025,
+        speed: 0.025,
         targetAngle: 0,
-        targetSize: 0.12,
-        spinSpeed: 0.035,
-        isSpinning: false,
+        targetSize: 0.12,  // 12% of circle
 
-        // Mining
-        hashesFound: 0,
-        hashesNeeded: 5,
-        hashChance: 0.45,
-        lastHash: '',
-        lastHashValid: false,
-        sessionVig: 0,
+        // Progress
+        hitsThisBlock: 0,
+        hitsNeeded: 5,
+        hashChance: 0.4,
         blocksToday: 0,
-
-        // Costs
-        electricityCost: 8,
-        rigCost: 4,
+        sessionEarnings: 0,
 
         // Sharks
         sharks: [],
+        multiplier: 1,
 
-        // Market
-        vigPrice: 100,
+        // Passed through target tracking
+        wasInTarget: false,
 
         // Stats
         highScore: 0,
@@ -143,33 +133,33 @@
     // ========================================================================
     const particles = [];
 
-    function spawnParticles(x, y, color, count, speed = 150) {
+    function burst(x, y, color, count, speed = 150) {
         for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 * i / count) + Math.random() * 0.3;
-            const vel = speed * (0.6 + Math.random() * 0.4);
+            const a = (Math.PI * 2 * i / count) + Math.random() * 0.4;
+            const v = speed * (0.5 + Math.random() * 0.5);
             particles.push({
                 x, y,
-                vx: Math.cos(angle) * vel,
-                vy: Math.sin(angle) * vel,
-                radius: 3 + Math.random() * 4,
+                vx: Math.cos(a) * v,
+                vy: Math.sin(a) * v,
+                r: 4 + Math.random() * 4,
                 color,
                 life: 1,
-                decay: 1.5 + Math.random() * 0.5
+                decay: 2
             });
         }
     }
 
-    function spawnRising(x, y, color, count) {
+    function sparkUp(x, y, color, count) {
         for (let i = 0; i < count; i++) {
             particles.push({
-                x: x + (Math.random() - 0.5) * 60,
+                x: x + (Math.random() - 0.5) * 50,
                 y,
-                vx: (Math.random() - 0.5) * 30,
-                vy: -120 - Math.random() * 80,
-                radius: 3 + Math.random() * 3,
+                vx: (Math.random() - 0.5) * 40,
+                vy: -100 - Math.random() * 100,
+                r: 3 + Math.random() * 4,
                 color,
                 life: 1,
-                decay: 1.2
+                decay: 1.5
             });
         }
     }
@@ -177,29 +167,12 @@
     // ========================================================================
     // CAMERA
     // ========================================================================
-    const camera = {
-        shakeX: 0,
-        shakeY: 0,
-        shakeMag: 0,
-        shakeTime: 0,
+    const camera = { x: 0, y: 0, mag: 0, time: 0 };
 
-        shake(mag, time) {
-            this.shakeMag = mag;
-            this.shakeTime = time;
-        },
-
-        update(dt) {
-            if (this.shakeTime > 0) {
-                this.shakeTime -= dt;
-                const intensity = this.shakeTime > 0 ? this.shakeMag : 0;
-                this.shakeX = (Math.random() - 0.5) * intensity * 2;
-                this.shakeY = (Math.random() - 0.5) * intensity * 2;
-            } else {
-                this.shakeX = 0;
-                this.shakeY = 0;
-            }
-        }
-    };
+    function shake(mag, time) {
+        camera.mag = mag;
+        camera.time = time;
+    }
 
     // ========================================================================
     // CANVAS
@@ -213,345 +186,302 @@
         H = window.innerHeight;
         canvas.width = W;
         canvas.height = H;
-
         cx = W / 2;
-        cy = H * 0.38;
-        ringR = Math.min(W * 0.38, H * 0.22);
+        cy = H * 0.4;
+        ringR = Math.min(W * 0.4, H * 0.25);
     }
 
     // ========================================================================
     // HELPERS
     // ========================================================================
-    function generateHash() {
-        const chars = '0123456789ABCDEF';
-        let h = '';
-        for (let i = 0; i < 8; i++) h += chars[Math.floor(Math.random() * 16)];
-        return h;
-    }
-
-    function lerp(a, b, t) {
-        return a + (b - a) * Math.min(1, t);
-    }
+    function lerp(a, b, t) { return a + (b - a) * Math.min(1, t); }
 
     function showMessage(text, color) {
         state.message = { text, color };
-        state.messageTimer = 1.2;
+        state.messageTimer = 1.5;
     }
 
     function flash(color) {
         state.flash = color;
-        state.flashTimer = 0.15;
+        state.flashTimer = 0.12;
+    }
+
+    function normalizeAngle(a) {
+        while (a < 0) a += Math.PI * 2;
+        while (a >= Math.PI * 2) a -= Math.PI * 2;
+        return a;
+    }
+
+    function isInTarget(angle) {
+        const a = normalizeAngle(angle);
+        const start = normalizeAngle(state.targetAngle);
+        const end = normalizeAngle(state.targetAngle + Math.PI * 2 * state.targetSize);
+
+        if (end > start) {
+            return a >= start && a <= end;
+        } else {
+            return a >= start || a <= end;
+        }
     }
 
     // ========================================================================
-    // SHARK LOGIC
+    // GAME LOGIC
     // ========================================================================
-    function addShark() {
-        const available = SHARKS.filter(s => !state.sharks.find(x => x.name === s.name));
-        if (!available.length) return null;
-
-        const template = available[Math.floor(Math.random() * available.length)];
-        const shark = {
-            ...template,
-            strikes: 0,
-            demand: template.baseDemand,
-            loanAmount: 80 + state.sharks.length * 40
-        };
-        state.sharks.push(shark);
-        return shark;
-    }
-
-    function updateSharkDemands() {
+    function calculateSpeed() {
+        let speed = state.baseSpeed + (state.day - 1) * 0.003;
         state.sharks.forEach(s => {
-            s.demand = Math.ceil(s.baseDemand * Math.pow(s.interestMult, state.day - 1));
+            speed *= s.speedBoost;
         });
+        return Math.min(speed, 0.15);  // Cap speed
     }
 
-    // ========================================================================
-    // GAME FLOW
-    // ========================================================================
+    function calculateMultiplier() {
+        let mult = 1;
+        state.sharks.forEach(s => {
+            mult *= s.multiplier;
+        });
+        return mult;
+    }
+
     function startGame() {
+        state.phase = Phase.MINING;
         state.day = 1;
-        state.cash = 40;
-        state.cashDisplay = 40;
-        state.vig = 0;
+        state.cash = 0;
+        state.cashDisplay = 0;
         state.sharks = [];
-        state.sessionVig = 0;
+        state.multiplier = 1;
         state.blocksToday = 0;
-        state.vigPrice = 100;
-        state.hashesNeeded = 5;
-        state.hashChance = 0.45;
-        state.electricityCost = 8;
-        state.rigCost = 4;
+        state.sessionEarnings = 0;
+        state.hitsThisBlock = 0;
+        state.hitsNeeded = 5;
 
-        addShark();
-        showMorning();
-    }
-
-    function showMorning() {
-        state.phase = GamePhase.MORNING;
-        state.sessionVig = 0;
-        state.blocksToday = 0;
-
-        // Scale difficulty
-        state.hashesNeeded = Math.min(10, 5 + Math.floor(state.day / 3));
-        state.hashChance = Math.max(0.25, 0.45 - state.day * 0.015);
-        state.spinSpeed = Math.min(0.07, 0.035 + state.day * 0.002);
-        state.targetSize = Math.max(0.08, 0.12 - state.day * 0.003);
-
-        state.electricityCost = 8 + state.day * 2;
-        state.rigCost = 4 + state.day;
-
-        updateSharkDemands();
-
-        // VIG price fluctuation
-        state.vigPrice = Math.max(40, state.vigPrice + (Math.random() - 0.52) * 25);
-
-        state.buttons = [{
-            id: 'mine',
-            text: 'START MINING',
-            x: cx,
-            y: H * 0.82,
-            w: 220,
-            h: 56,
-            color: COLORS.primary,
-            action: startMining
-        }];
-    }
-
-    function startMining() {
-        state.phase = GamePhase.MINING;
-        state.isSpinning = true;
-        state.hashesFound = 0;
         state.angle = Math.random() * Math.PI * 2;
+        state.direction = 1;
+        state.speed = calculateSpeed();
         state.targetAngle = Math.random() * Math.PI * 2;
-        state.lastHash = '';
+        state.targetSize = 0.12;
+        state.wasInTarget = isInTarget(state.angle);
+
         state.buttons = [];
     }
 
     function handleTap() {
-        if (state.phase !== GamePhase.MINING || !state.isSpinning) return;
+        if (state.phase !== Phase.MINING) return;
 
-        state.isSpinning = false;
+        const inTarget = isInTarget(state.angle);
 
-        // Check hit
-        const tStart = state.targetAngle;
-        const tEnd = tStart + Math.PI * 2 * state.targetSize;
-        let a = state.angle % (Math.PI * 2);
-        if (a < 0) a += Math.PI * 2;
+        if (inTarget) {
+            // HIT! Reverse direction
+            state.direction *= -1;
+            state.hitsThisBlock++;
 
-        let hit = false;
-        if (tEnd > Math.PI * 2) {
-            hit = a >= tStart || a <= (tEnd % (Math.PI * 2));
-        } else {
-            hit = a >= tStart && a <= tEnd;
-        }
+            const hx = cx + Math.cos(state.angle) * ringR;
+            const hy = cy + Math.sin(state.angle) * ringR;
 
-        if (hit) {
-            onHit();
-        } else {
-            onMiss();
-        }
-    }
+            // Check if we cracked the block (luck factor)
+            const lucky = Math.random() < state.hashChance;
 
-    function onHit() {
-        const hx = cx + Math.cos(state.angle) * ringR;
-        const hy = cy + Math.sin(state.angle) * ringR;
+            if (lucky) {
+                burst(hx, hy, COLORS.success, 15, 120);
+                flash(COLORS.successGlow);
 
-        state.lastHash = generateHash();
-        state.lastHashValid = Math.random() < state.hashChance;
-
-        if (state.lastHashValid) {
-            state.hashesFound++;
-            spawnParticles(hx, hy, COLORS.success, 12, 100);
-            flash(COLORS.successGlow);
-
-            if (state.hashesFound >= state.hashesNeeded) {
-                crackBlock();
-                return;
+                if (state.hitsThisBlock >= state.hitsNeeded) {
+                    // Block cracked!
+                    crackBlock();
+                }
+            } else {
+                burst(hx, hy, COLORS.primary, 8, 80);
             }
+
+            // Move target to new position
+            state.targetAngle = Math.random() * Math.PI * 2;
+            state.wasInTarget = false;
+
         } else {
-            spawnParticles(hx, hy, COLORS.textMuted, 6, 50);
+            // MISS - tapped outside target
+            gameOver('Missed the target!');
         }
-
-        // Continue
-        setTimeout(() => {
-            if (state.phase === GamePhase.MINING) {
-                state.isSpinning = true;
-                state.targetAngle = Math.random() * Math.PI * 2;
-            }
-        }, 200);
-    }
-
-    function onMiss() {
-        // ONE MISS = DONE
-        state.phase = GamePhase.CRASHED;
-        camera.shake(25, 0.5);
-        flash(COLORS.dangerGlow);
-        spawnParticles(cx, cy, COLORS.danger, 30, 200);
-        showMessage('RIG CRASHED!', COLORS.danger);
-
-        // Lose session earnings
-        state.sessionVig = 0;
-
-        setTimeout(() => {
-            endDay();
-        }, 1500);
     }
 
     function crackBlock() {
-        state.phase = GamePhase.BLOCK_CRACKED;
         state.blocksToday++;
+        state.hitsThisBlock = 0;
 
-        const earned = 0.08 + Math.random() * 0.04;
-        state.vig += earned;
-        state.sessionVig += earned;
-
-        camera.shake(10, 0.3);
-        flash(COLORS.primaryGlow);
-        spawnParticles(cx, cy, COLORS.primary, 20, 150);
-        spawnRising(cx, cy - 30, COLORS.success, 10);
-        showMessage('BLOCK CRACKED!', COLORS.primary);
-
-        setTimeout(() => {
-            state.buttons = [
-                {
-                    id: 'endday',
-                    text: 'CASH OUT',
-                    x: cx - 80,
-                    y: H * 0.72,
-                    w: 140,
-                    h: 50,
-                    color: COLORS.success,
-                    action: endDay
-                },
-                {
-                    id: 'continue',
-                    text: 'KEEP GOING',
-                    x: cx + 80,
-                    y: H * 0.72,
-                    w: 140,
-                    h: 50,
-                    color: COLORS.purple,
-                    action: continuesMining
-                }
-            ];
-        }, 600);
-    }
-
-    function continuesMining() {
-        state.phase = GamePhase.MINING;
-        state.isSpinning = true;
-        state.hashesFound = 0;
-        state.targetAngle = Math.random() * Math.PI * 2;
-        state.buttons = [];
-    }
-
-    function endDay() {
-        // Convert VIG to cash
-        const earned = state.sessionVig * state.vigPrice;
+        // Earnings based on multiplier
+        const baseEarn = 10 + Math.random() * 5;
+        const earned = Math.floor(baseEarn * state.multiplier);
+        state.sessionEarnings += earned;
         state.cash += earned;
-        state.vig = 0;
-        state.sessionVig = 0;
 
-        // Deduct costs
-        state.cash -= state.electricityCost;
-        state.cash -= state.rigCost;
-        state.cash = Math.max(0, state.cash);
+        burst(cx, cy, COLORS.primary, 25, 180);
+        sparkUp(cx, cy - 50, COLORS.success, 15);
+        showMessage('+$' + earned, COLORS.success);
+        shake(12, 0.3);
 
-        state.phase = GamePhase.PAYDAY;
-        state.buttons = [];
-
-        setTimeout(buildPaydayButtons, 300);
+        // Move target
+        state.targetAngle = Math.random() * Math.PI * 2;
     }
 
-    function buildPaydayButtons() {
-        state.buttons = [];
+    function checkPassedTarget(prevAngle, newAngle) {
+        // Check if we passed through the target without tapping
+        const wasIn = isInTarget(prevAngle);
+        const nowIn = isInTarget(newAngle);
 
-        // Pay/skip buttons handled in render via tap detection
-
-        const hasMore = state.sharks.length < SHARKS.length;
-
-        if (hasMore) {
-            state.buttons.push({
-                id: 'loan',
-                text: '+ NEW LOAN',
-                x: cx,
-                y: H * 0.78,
-                w: 160,
-                h: 48,
-                color: COLORS.warning,
-                action: () => {
-                    const s = addShark();
-                    if (s) {
-                        state.cash += s.loanAmount;
-                        spawnRising(cx, H * 0.5, COLORS.warning, 12);
-                        showMessage('+$' + s.loanAmount, COLORS.success);
-                        buildPaydayButtons();
-                    }
-                }
-            });
+        // Entered the target
+        if (!state.wasInTarget && nowIn) {
+            state.wasInTarget = true;
         }
 
-        state.buttons.push({
-            id: 'next',
-            text: 'NEXT DAY',
-            x: cx,
-            y: H * 0.88,
-            w: 180,
-            h: 52,
-            color: COLORS.primary,
-            action: () => {
-                state.day++;
-                showMorning();
-            }
-        });
-    }
-
-    function payShark(i) {
-        const s = state.sharks[i];
-        if (state.cash >= s.demand) {
-            state.cash -= s.demand;
-            s.paid = true;
-            spawnRising(cx, H * 0.4, COLORS.success, 8);
+        // Left the target without tapping
+        if (state.wasInTarget && !nowIn) {
+            gameOver('Passed the target!');
+            return true;
         }
-    }
 
-    function skipShark(i) {
-        const s = state.sharks[i];
-        s.strikes++;
-        s.paid = true;
-        camera.shake(8, 0.2);
-
-        if (s.strikes >= 3) {
-            gameOver(s.name + ' collected.');
-        }
+        return false;
     }
 
     function gameOver(reason) {
-        state.phase = GamePhase.GAMEOVER;
-        state.gameOverReason = reason;
+        state.phase = Phase.GAMEOVER;
+        state.sessionEarnings = 0;  // Lose everything
 
         if (state.day > state.highScore) {
             state.highScore = state.day;
             localStorage.setItem('vig_hs', state.highScore);
         }
 
-        camera.shake(30, 0.6);
+        shake(30, 0.5);
         flash(COLORS.dangerGlow);
+        burst(cx, cy, COLORS.danger, 30, 200);
+        showMessage(reason, COLORS.danger);
 
         setTimeout(() => {
-            state.buttons = [{
-                id: 'restart',
-                text: 'TRY AGAIN',
+            state.buttons = [
+                {
+                    text: 'TRY AGAIN',
+                    x: cx,
+                    y: H * 0.7,
+                    w: 180,
+                    h: 56,
+                    color: COLORS.primary,
+                    action: startGame
+                }
+            ];
+        }, 1000);
+    }
+
+    function endDay() {
+        state.phase = Phase.PAYDAY;
+        state.buttons = [];
+
+        // Update shark demands based on day
+        state.sharks.forEach(s => {
+            s.demand = Math.ceil(s.baseDemand * Math.pow(1.15, state.day - 1));
+        });
+
+        setTimeout(buildPaydayUI, 300);
+    }
+
+    function buildPaydayUI() {
+        state.buttons = [];
+
+        // Available sharks to borrow from
+        const borrowed = state.sharks.map(s => s.name);
+        const available = SHARKS.filter(s => !borrowed.includes(s.name));
+
+        if (available.length > 0) {
+            const next = available[0];
+            state.buttons.push({
+                text: `LOAN: +$${next.loanAmount} (${next.multiplier}x)`,
                 x: cx,
                 y: H * 0.75,
-                w: 180,
-                h: 56,
-                color: COLORS.primary,
-                action: startGame
-            }];
-        }, 1000);
+                w: 280,
+                h: 50,
+                color: COLORS.warning,
+                action: () => {
+                    state.sharks.push({ ...next, strikes: 0, demand: next.baseDemand });
+                    state.cash += next.loanAmount;
+                    state.multiplier = calculateMultiplier();
+                    state.speed = calculateSpeed();
+                    sparkUp(cx, H * 0.5, COLORS.warning, 15);
+                    showMessage(`${next.name} joins. ${next.multiplier}x multiplier!`, COLORS.warning);
+                    buildPaydayUI();
+                }
+            });
+        }
+
+        state.buttons.push({
+            text: 'NEXT DAY',
+            x: cx,
+            y: H * 0.85,
+            w: 180,
+            h: 52,
+            color: COLORS.primary,
+            action: nextDay
+        });
+    }
+
+    function payShark(index) {
+        const s = state.sharks[index];
+        if (state.cash >= s.demand) {
+            state.cash -= s.demand;
+            s.paid = true;
+            sparkUp(cx, H * 0.4, COLORS.success, 10);
+        }
+    }
+
+    function skipShark(index) {
+        const s = state.sharks[index];
+        s.strikes++;
+        s.paid = true;
+        shake(10, 0.2);
+
+        if (s.strikes >= 3) {
+            state.phase = Phase.GAMEOVER;
+            showMessage(s.name + ' collected.', COLORS.danger);
+            shake(30, 0.5);
+
+            if (state.day > state.highScore) {
+                state.highScore = state.day;
+                localStorage.setItem('vig_hs', state.highScore);
+            }
+
+            setTimeout(() => {
+                state.buttons = [{
+                    text: 'TRY AGAIN',
+                    x: cx,
+                    y: H * 0.75,
+                    w: 180,
+                    h: 56,
+                    color: COLORS.primary,
+                    action: startGame
+                }];
+            }, 1000);
+        }
+    }
+
+    function nextDay() {
+        state.day++;
+        state.phase = Phase.MINING;
+        state.blocksToday = 0;
+        state.sessionEarnings = 0;
+        state.hitsThisBlock = 0;
+
+        // Increase difficulty
+        state.hitsNeeded = Math.min(10, 5 + Math.floor(state.day / 2));
+        state.hashChance = Math.max(0.25, 0.4 - state.day * 0.01);
+        state.targetSize = Math.max(0.06, 0.12 - state.day * 0.005);
+        state.speed = calculateSpeed();
+
+        state.angle = Math.random() * Math.PI * 2;
+        state.direction = 1;
+        state.targetAngle = Math.random() * Math.PI * 2;
+        state.wasInTarget = isInTarget(state.angle);
+
+        // Reset shark paid status
+        state.sharks.forEach(s => s.paid = false);
+
+        state.buttons = [];
     }
 
     // ========================================================================
@@ -560,41 +490,48 @@
     function handleInput(x, y) {
         // Check buttons
         for (const b of state.buttons) {
-            if (b.action && x >= b.x - b.w/2 && x <= b.x + b.w/2 && y >= b.y - b.h/2 && y <= b.y + b.h/2) {
-                b.action();
+            if (x >= b.x - b.w/2 && x <= b.x + b.w/2 &&
+                y >= b.y - b.h/2 && y <= b.y + b.h/2) {
+                if (b.action) b.action();
                 return;
             }
         }
 
         // Payday shark buttons
-        if (state.phase === GamePhase.PAYDAY) {
+        if (state.phase === Phase.PAYDAY) {
             const cardW = W * 0.85;
-            const cardH = 80;
-            const startY = H * 0.22;
+            const cardH = 75;
+            const startY = H * 0.18;
 
             state.sharks.forEach((s, i) => {
                 if (s.paid) return;
+                const y0 = startY + i * (cardH + 10);
+                const btnY = y0 + cardH / 2;
 
-                const cardY = startY + i * (cardH + 12);
-                const btnY = cardY + cardH/2;
-                const payX = cx + cardW/2 - 110;
-                const skipX = cx + cardW/2 - 45;
-
-                // Pay button
-                if (x >= payX - 30 && x <= payX + 30 && y >= btnY - 18 && y <= btnY + 18) {
+                // Pay
+                if (x >= cx + cardW/2 - 130 && x <= cx + cardW/2 - 70 &&
+                    y >= btnY - 18 && y <= btnY + 18) {
                     payShark(i);
                     return;
                 }
-                // Skip button
-                if (x >= skipX - 25 && x <= skipX + 25 && y >= btnY - 18 && y <= btnY + 18) {
+                // Skip
+                if (x >= cx + cardW/2 - 60 && x <= cx + cardW/2 - 10 &&
+                    y >= btnY - 18 && y <= btnY + 18) {
                     skipShark(i);
                     return;
                 }
             });
+            return;
         }
 
-        // Mining tap
-        if (state.phase === GamePhase.MINING) {
+        // Menu
+        if (state.phase === Phase.MENU) {
+            startGame();
+            return;
+        }
+
+        // Mining
+        if (state.phase === Phase.MINING) {
             handleTap();
         }
     }
@@ -617,9 +554,14 @@
     let lastTime = 0;
 
     function update(dt) {
-        // Spin
-        if (state.isSpinning) {
-            state.angle += state.spinSpeed;
+        // Mining movement
+        if (state.phase === Phase.MINING) {
+            const prevAngle = state.angle;
+            state.angle += state.speed * state.direction;
+            state.angle = normalizeAngle(state.angle);
+
+            // Check if passed through target
+            checkPassedTarget(prevAngle, state.angle);
         }
 
         // Particles
@@ -627,21 +569,26 @@
             const p = particles[i];
             p.x += p.vx * dt;
             p.y += p.vy * dt;
-            p.vy += 300 * dt;
+            p.vy += 400 * dt;
             p.life -= p.decay * dt;
             if (p.life <= 0) particles.splice(i, 1);
         }
 
-        // Camera
-        camera.update(dt);
+        // Camera shake
+        if (camera.time > 0) {
+            camera.time -= dt;
+            camera.x = (Math.random() - 0.5) * camera.mag * 2;
+            camera.y = (Math.random() - 0.5) * camera.mag * 2;
+        } else {
+            camera.x = 0;
+            camera.y = 0;
+        }
 
         // Tweens
-        state.cashDisplay = lerp(state.cashDisplay, state.cash, dt * 10);
+        state.cashDisplay = lerp(state.cashDisplay, state.cash, dt * 12);
 
-        // Message
+        // Timers
         if (state.messageTimer > 0) state.messageTimer -= dt;
-
-        // Flash
         if (state.flashTimer > 0) state.flashTimer -= dt;
     }
 
@@ -650,33 +597,29 @@
     // ========================================================================
     function render() {
         ctx.save();
-        ctx.translate(camera.shakeX, camera.shakeY);
+        ctx.translate(camera.x, camera.y);
 
         // BG
         ctx.fillStyle = COLORS.bg;
         ctx.fillRect(-50, -50, W + 100, H + 100);
 
         // Flash
-        if (state.flashTimer > 0 && state.flash) {
+        if (state.flashTimer > 0) {
             ctx.fillStyle = state.flash;
             ctx.fillRect(0, 0, W, H);
         }
 
         switch (state.phase) {
-            case GamePhase.MENU: renderMenu(); break;
-            case GamePhase.MORNING: renderMorning(); break;
-            case GamePhase.MINING:
-            case GamePhase.BLOCK_CRACKED:
-            case GamePhase.CRASHED:
-                renderMining(); break;
-            case GamePhase.PAYDAY: renderPayday(); break;
-            case GamePhase.GAMEOVER: renderGameOver(); break;
+            case Phase.MENU: renderMenu(); break;
+            case Phase.MINING: renderMining(); break;
+            case Phase.PAYDAY: renderPayday(); break;
+            case Phase.GAMEOVER: renderGameOver(); break;
         }
 
         // Particles
         particles.forEach(p => {
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
             ctx.fillStyle = p.color;
             ctx.globalAlpha = p.life;
             ctx.fill();
@@ -685,11 +628,11 @@
 
         // Message
         if (state.messageTimer > 0 && state.message) {
-            ctx.globalAlpha = Math.min(1, state.messageTimer * 2);
-            ctx.font = '700 28px Orbitron';
+            ctx.globalAlpha = Math.min(1, state.messageTimer);
+            ctx.font = '700 26px Orbitron';
             ctx.fillStyle = state.message.color;
             ctx.textAlign = 'center';
-            ctx.fillText(state.message.text, cx, cy - ringR - 50);
+            ctx.fillText(state.message.text, cx, cy - ringR - 60);
             ctx.globalAlpha = 1;
         }
 
@@ -700,88 +643,49 @@
     }
 
     function renderMenu() {
-        // Title
-        ctx.font = '900 64px Orbitron';
+        ctx.font = '900 72px Orbitron';
         ctx.fillStyle = COLORS.primary;
         ctx.textAlign = 'center';
-        ctx.fillText('VIG', cx, H * 0.32);
+        ctx.fillText('VIG', cx, H * 0.30);
 
-        // Tagline
         ctx.font = '400 16px Inter';
         ctx.fillStyle = COLORS.textSecondary;
         ctx.fillText('Mine crypto. Pay sharks. Survive.', cx, H * 0.40);
 
-        // High score
+        ctx.font = '600 14px Inter';
+        ctx.fillStyle = COLORS.danger;
+        ctx.fillText('Miss or pass the target = GAME OVER', cx, H * 0.48);
+
         if (state.highScore > 0) {
             ctx.font = '600 18px Inter';
             ctx.fillStyle = COLORS.purple;
-            ctx.fillText('Best: ' + state.highScore + ' days', cx, H * 0.50);
+            ctx.fillText('Best: Day ' + state.highScore, cx, H * 0.56);
         }
 
-        // Warning
-        ctx.font = '600 14px Inter';
-        ctx.fillStyle = COLORS.danger;
-        ctx.fillText('One miss and you\'re done.', cx, H * 0.58);
-    }
-
-    function renderMorning() {
-        // Day
-        ctx.font = '700 24px Orbitron';
-        ctx.fillStyle = COLORS.text;
-        ctx.textAlign = 'center';
-        ctx.fillText('DAY ' + state.day, cx, H * 0.08);
-
-        // Cash
-        ctx.font = '900 42px Orbitron';
-        ctx.fillStyle = COLORS.success;
-        ctx.fillText('$' + Math.floor(state.cashDisplay), cx, H * 0.17);
-
-        // Costs section
-        ctx.font = '600 14px Inter';
-        ctx.fillStyle = COLORS.textSecondary;
-        ctx.fillText('DAILY COSTS', cx, H * 0.26);
-
-        ctx.font = '400 16px Inter';
-        ctx.fillStyle = COLORS.danger;
-        ctx.fillText('Electricity: -$' + state.electricityCost, cx, H * 0.31);
-        ctx.fillText('Rig decay: -$' + state.rigCost, cx, H * 0.36);
-
-        // Sharks want
-        const total = state.sharks.reduce((s, x) => s + x.demand, 0);
-        ctx.font = '600 14px Inter';
-        ctx.fillStyle = COLORS.textSecondary;
-        ctx.fillText('SHARKS WANT', cx, H * 0.45);
-
-        ctx.font = '700 32px Orbitron';
-        ctx.fillStyle = COLORS.warning;
-        ctx.fillText('$' + total, cx, H * 0.52);
-
-        // Mining stats
-        ctx.font = '400 13px Inter';
-        ctx.fillStyle = COLORS.textMuted;
-        ctx.fillText('Hash chance: ' + Math.floor(state.hashChance * 100) + '%  |  Hashes needed: ' + state.hashesNeeded, cx, H * 0.62);
-        ctx.fillText('VIG price: $' + Math.floor(state.vigPrice), cx, H * 0.67);
+        ctx.font = '700 20px Inter';
+        ctx.fillStyle = COLORS.primary;
+        ctx.fillText('TAP TO START', cx, H * 0.72);
     }
 
     function renderMining() {
         // Header
-        ctx.font = '600 16px Inter';
+        ctx.font = '700 18px Orbitron';
         ctx.textAlign = 'left';
         ctx.fillStyle = COLORS.success;
-        ctx.fillText('$' + Math.floor(state.cashDisplay), 20, 35);
+        ctx.fillText('$' + Math.floor(state.cashDisplay), 20, 40);
 
         ctx.textAlign = 'center';
         ctx.fillStyle = COLORS.text;
-        ctx.fillText('DAY ' + state.day, cx, 35);
+        ctx.fillText('DAY ' + state.day, cx, 40);
 
         ctx.textAlign = 'right';
         ctx.fillStyle = COLORS.primary;
-        ctx.fillText(state.sessionVig.toFixed(3) + ' VIG', W - 20, 35);
+        ctx.fillText(state.multiplier.toFixed(1) + 'x', W - 20, 40);
 
         // Ring glow
         ctx.beginPath();
-        ctx.arc(cx, cy, ringR + 20, 0, Math.PI * 2);
-        const glow = ctx.createRadialGradient(cx, cy, ringR - 10, cx, cy, ringR + 40);
+        ctx.arc(cx, cy, ringR + 25, 0, Math.PI * 2);
+        const glow = ctx.createRadialGradient(cx, cy, ringR - 10, cx, cy, ringR + 50);
         glow.addColorStop(0, 'transparent');
         glow.addColorStop(0.5, COLORS.primaryGlow);
         glow.addColorStop(1, 'transparent');
@@ -792,184 +696,200 @@
         ctx.beginPath();
         ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
         ctx.strokeStyle = COLORS.border;
-        ctx.lineWidth = 14;
+        ctx.lineWidth = 18;
         ctx.stroke();
 
         // Target zone
+        const tStart = state.targetAngle;
+        const tEnd = tStart + Math.PI * 2 * state.targetSize;
         ctx.beginPath();
-        ctx.arc(cx, cy, ringR, state.targetAngle, state.targetAngle + Math.PI * 2 * state.targetSize);
+        ctx.arc(cx, cy, ringR, tStart, tEnd);
         ctx.strokeStyle = COLORS.primary;
-        ctx.lineWidth = 16;
+        ctx.lineWidth = 22;
         ctx.stroke();
+
+        // Direction indicator
+        const dirSymbol = state.direction > 0 ? '→' : '←';
+        ctx.font = '400 14px Inter';
+        ctx.fillStyle = COLORS.textMuted;
+        ctx.textAlign = 'center';
+        ctx.fillText(dirSymbol, cx, cy);
 
         // Spinner
         const sx = cx + Math.cos(state.angle) * ringR;
         const sy = cy + Math.sin(state.angle) * ringR;
 
         // Trail
-        for (let i = 1; i <= 6; i++) {
-            const ta = state.angle - i * 0.08;
+        for (let i = 1; i <= 8; i++) {
+            const ta = state.angle - state.direction * i * 0.06;
             const tx = cx + Math.cos(ta) * ringR;
             const ty = cy + Math.sin(ta) * ringR;
             ctx.beginPath();
-            ctx.arc(tx, ty, 10 - i, 0, Math.PI * 2);
+            ctx.arc(tx, ty, 12 - i, 0, Math.PI * 2);
             ctx.fillStyle = COLORS.text;
-            ctx.globalAlpha = (6 - i) / 6 * 0.4;
+            ctx.globalAlpha = (8 - i) / 8 * 0.4;
             ctx.fill();
         }
         ctx.globalAlpha = 1;
 
         // Main dot
         ctx.beginPath();
-        ctx.arc(sx, sy, 12, 0, Math.PI * 2);
+        ctx.arc(sx, sy, 14, 0, Math.PI * 2);
         ctx.fillStyle = '#fff';
         ctx.fill();
 
         // Progress
-        const progY = cy + ringR + 50;
-        ctx.font = '600 14px Inter';
+        ctx.font = '600 16px Inter';
         ctx.fillStyle = COLORS.textSecondary;
         ctx.textAlign = 'center';
-        ctx.fillText('HASHES: ' + state.hashesFound + ' / ' + state.hashesNeeded, cx, progY);
+        ctx.fillText('HITS: ' + state.hitsThisBlock + ' / ' + state.hitsNeeded, cx, cy + ringR + 50);
 
         // Progress bar
-        const barW = W * 0.7;
-        const barH = 12;
+        const barW = W * 0.65;
+        const barH = 14;
         const barX = cx - barW / 2;
-        const barY = progY + 15;
+        const barY = cy + ringR + 65;
 
         ctx.fillStyle = COLORS.bgCard;
         ctx.fillRect(barX, barY, barW, barH);
-
         ctx.fillStyle = COLORS.primary;
-        ctx.fillRect(barX, barY, barW * (state.hashesFound / state.hashesNeeded), barH);
+        ctx.fillRect(barX, barY, barW * (state.hitsThisBlock / state.hitsNeeded), barH);
 
-        ctx.strokeStyle = COLORS.border;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(barX, barY, barW, barH);
+        // Blocks today
+        ctx.font = '400 14px Inter';
+        ctx.fillStyle = COLORS.textMuted;
+        ctx.fillText('Blocks: ' + state.blocksToday + '  |  Earned: $' + state.sessionEarnings, cx, barY + 40);
 
-        // Last hash
-        if (state.lastHash) {
-            ctx.font = '600 14px Inter';
-            ctx.fillStyle = state.lastHashValid ? COLORS.success : COLORS.textMuted;
-            ctx.fillText(state.lastHash + (state.lastHashValid ? ' ✓' : ''), cx, barY + 40);
-        }
+        // Cash out button (always visible during mining)
+        if (state.blocksToday > 0) {
+            renderButton({
+                text: 'CASH OUT',
+                x: cx,
+                y: H * 0.88,
+                w: 160,
+                h: 48,
+                color: COLORS.success,
+                action: endDay
+            });
 
-        // Tap prompt
-        if (state.isSpinning) {
-            ctx.font = '600 18px Inter';
-            ctx.fillStyle = COLORS.textMuted;
-            ctx.fillText('TAP TO HASH', cx, H * 0.88);
+            // Make it tappable
+            if (!state.buttons.find(b => b.text === 'CASH OUT')) {
+                state.buttons = [{
+                    text: 'CASH OUT',
+                    x: cx,
+                    y: H * 0.88,
+                    w: 160,
+                    h: 48,
+                    color: COLORS.success,
+                    action: endDay
+                }];
+            }
+        } else {
+            state.buttons = [];
         }
     }
 
     function renderPayday() {
-        // Header
         ctx.font = '700 28px Orbitron';
         ctx.fillStyle = COLORS.warning;
         ctx.textAlign = 'center';
         ctx.fillText('PAYDAY', cx, H * 0.06);
 
-        // Cash
-        ctx.font = '900 38px Orbitron';
+        ctx.font = '900 42px Orbitron';
         ctx.fillStyle = COLORS.success;
         ctx.fillText('$' + Math.floor(state.cashDisplay), cx, H * 0.13);
 
-        // Blocks
-        ctx.font = '400 14px Inter';
-        ctx.fillStyle = COLORS.textSecondary;
-        ctx.fillText('Blocks mined: ' + state.blocksToday, cx, H * 0.18);
-
-        // Shark cards
+        // Sharks
         const cardW = W * 0.85;
-        const cardH = 80;
-        const startY = H * 0.22;
+        const cardH = 75;
+        const startY = H * 0.18;
 
         state.sharks.forEach((s, i) => {
-            const y = startY + i * (cardH + 12);
+            const y = startY + i * (cardH + 10);
 
-            // Card bg
             ctx.fillStyle = s.strikes >= 2 ? '#1a1215' : COLORS.bgCard;
             ctx.fillRect(cx - cardW/2, y, cardW, cardH);
 
-            // Border
             ctx.strokeStyle = s.strikes >= 2 ? COLORS.danger : s.strikes >= 1 ? COLORS.warning : COLORS.border;
             ctx.lineWidth = 2;
             ctx.strokeRect(cx - cardW/2, y, cardW, cardH);
 
-            // Name
-            ctx.font = '700 16px Inter';
+            ctx.font = '700 15px Inter';
             ctx.fillStyle = COLORS.text;
             ctx.textAlign = 'left';
-            ctx.fillText(s.name, cx - cardW/2 + 15, y + 30);
+            ctx.fillText(s.name, cx - cardW/2 + 15, y + 28);
 
-            // Strikes
-            ctx.font = '400 14px Inter';
-            ctx.fillStyle = s.strikes >= 2 ? COLORS.danger : COLORS.textMuted;
+            ctx.font = '400 12px Inter';
+            ctx.fillStyle = COLORS.textMuted;
             let strikes = '';
             for (let j = 0; j < 3; j++) strikes += j < s.strikes ? '✗ ' : '○ ';
-            ctx.fillText(strikes, cx - cardW/2 + 15, y + 55);
+            ctx.fillText(strikes + ' | ' + s.multiplier + 'x mult', cx - cardW/2 + 15, y + 50);
 
-            // Demand
-            ctx.font = '700 20px Orbitron';
+            ctx.font = '700 18px Orbitron';
             ctx.fillStyle = COLORS.success;
             ctx.textAlign = 'center';
-            ctx.fillText('$' + s.demand, cx, y + 45);
+            ctx.fillText('$' + s.demand, cx, y + 42);
 
-            // Buttons (if not paid)
             if (!s.paid) {
-                const btnY = y + cardH/2;
                 const canPay = state.cash >= s.demand;
 
-                // Pay
                 ctx.fillStyle = canPay ? COLORS.success : COLORS.textMuted;
-                ctx.fillRect(cx + cardW/2 - 140, btnY - 16, 60, 32);
-                ctx.font = '700 12px Inter';
+                ctx.fillRect(cx + cardW/2 - 130, y + cardH/2 - 16, 55, 32);
+                ctx.font = '700 11px Inter';
                 ctx.fillStyle = '#000';
                 ctx.textAlign = 'center';
-                ctx.fillText('PAY', cx + cardW/2 - 110, btnY + 5);
+                ctx.fillText('PAY', cx + cardW/2 - 102, y + cardH/2 + 5);
 
-                // Skip
                 ctx.fillStyle = COLORS.danger;
-                ctx.fillRect(cx + cardW/2 - 70, btnY - 16, 55, 32);
+                ctx.fillRect(cx + cardW/2 - 65, y + cardH/2 - 16, 50, 32);
                 ctx.fillStyle = '#000';
-                ctx.fillText('SKIP', cx + cardW/2 - 42, btnY + 5);
+                ctx.fillText('SKIP', cx + cardW/2 - 40, y + cardH/2 + 5);
             } else {
-                ctx.font = '700 14px Inter';
+                ctx.font = '600 12px Inter';
                 ctx.fillStyle = COLORS.textMuted;
                 ctx.textAlign = 'right';
-                ctx.fillText('DONE', cx + cardW/2 - 15, y + 45);
+                ctx.fillText('PAID', cx + cardW/2 - 15, y + cardH/2 + 5);
             }
         });
+
+        // Info about next loan
+        const borrowed = state.sharks.map(s => s.name);
+        const available = SHARKS.filter(s => !borrowed.includes(s.name));
+        if (available.length > 0) {
+            const next = available[0];
+            ctx.font = '400 12px Inter';
+            ctx.fillStyle = COLORS.textMuted;
+            ctx.textAlign = 'center';
+            ctx.fillText(`Next loan: +$${next.loanAmount}, ${next.multiplier}x mult, +${Math.round((next.speedBoost-1)*100)}% speed`, cx, H * 0.70);
+        }
     }
 
     function renderGameOver() {
-        ctx.font = '900 42px Orbitron';
+        ctx.font = '900 48px Orbitron';
         ctx.fillStyle = COLORS.danger;
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', cx, H * 0.25);
+        ctx.fillText('GAME OVER', cx, H * 0.28);
+
+        ctx.font = '700 22px Inter';
+        ctx.fillStyle = COLORS.text;
+        ctx.fillText('Day ' + state.day, cx, H * 0.42);
 
         ctx.font = '400 16px Inter';
         ctx.fillStyle = COLORS.textSecondary;
-        ctx.fillText(state.gameOverReason || '', cx, H * 0.33);
+        ctx.fillText('Blocks mined: ' + state.blocksToday, cx, H * 0.50);
+        ctx.fillText('Sharks: ' + state.sharks.length, cx, H * 0.56);
 
-        ctx.font = '700 20px Inter';
-        ctx.fillStyle = COLORS.text;
-        ctx.fillText('Days survived: ' + state.day, cx, H * 0.45);
-        ctx.fillText('Blocks mined: ' + state.blocksToday, cx, H * 0.52);
-
+        ctx.font = '600 18px Inter';
         ctx.fillStyle = COLORS.purple;
-        ctx.fillText('Best: ' + state.highScore + ' days', cx, H * 0.62);
+        ctx.fillText('Best: Day ' + state.highScore, cx, H * 0.64);
     }
 
     function renderButton(b) {
-        // Bg
         ctx.fillStyle = b.color;
         ctx.beginPath();
-        ctx.roundRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h, 8);
+        ctx.roundRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h, 10);
         ctx.fill();
 
-        // Text
         ctx.font = '700 14px Inter';
         ctx.fillStyle = '#000';
         ctx.textAlign = 'center';
@@ -987,7 +907,6 @@
 
         update(dt);
         render();
-
         requestAnimationFrame(loop);
     }
 
@@ -997,26 +916,6 @@
     state.highScore = parseInt(localStorage.getItem('vig_hs') || '0');
     resize();
     window.addEventListener('resize', resize);
-
-    // Set up menu buttons on init
-    state.buttons = [{
-        id: 'start',
-        text: 'START',
-        x: cx,
-        y: H * 0.72,
-        w: 180,
-        h: 56,
-        color: COLORS.primary,
-        action: startGame
-    }];
-
-    // Reset shark paid status each payday
-    const origShowMorning = showMorning;
-    showMorning = function() {
-        state.sharks.forEach(s => s.paid = false);
-        origShowMorning();
-    };
-
     requestAnimationFrame(loop);
 })();
 </script>
