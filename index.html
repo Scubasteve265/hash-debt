@@ -9,7 +9,7 @@
     <title>VIG</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
             height: 100%;
             overflow: hidden;
             background: #0a0a0a;
-            font-family: 'Press Start 2P', monospace;
+            font-family: 'Inter', sans-serif;
         }
 
         #game {
@@ -35,13 +35,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
         }
 
         canvas {
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
             touch-action: none;
         }
     </style>
@@ -52,46 +48,48 @@
     </div>
 
 <script>
-// ============================================================================
-// VIG - Mine crypto. Pay sharks. Survive.
-// Architecture based on Universal Paperclips + Shattered Pixel Dungeon patterns
-// ============================================================================
-
 (function() {
     'use strict';
 
     // ========================================================================
-    // CONSTANTS
+    // COLORS - Clean, modern, neon
     // ========================================================================
     const COLORS = {
         bg: '#0a0a0a',
-        bgLight: '#1a1a1a',
+        bgCard: '#141418',
+        bgCardHover: '#1a1a20',
         primary: '#f7931a',      // VIG orange
-        success: '#4ade80',      // Green
-        danger: '#ef4444',       // Red
-        warning: '#f59e0b',      // Yellow
+        primaryGlow: 'rgba(247, 147, 26, 0.3)',
+        success: '#10b981',
+        successGlow: 'rgba(16, 185, 129, 0.3)',
+        danger: '#ef4444',
+        dangerGlow: 'rgba(239, 68, 68, 0.3)',
+        warning: '#f59e0b',
         purple: '#8b5cf6',
         text: '#ffffff',
-        textDim: '#666666',
-        textMuted: '#333333'
+        textSecondary: '#a1a1aa',
+        textMuted: '#52525b',
+        border: '#27272a'
     };
 
     const SHARKS = [
-        { name: 'Vinnie', personality: 'patient', baseDemand: 30, interestMult: 1.1 },
-        { name: 'Marco', personality: 'volatile', baseDemand: 50, interestMult: 1.2 },
-        { name: 'Big Tony', personality: 'heavy', baseDemand: 80, interestMult: 1.15 },
-        { name: 'The Butcher', personality: 'ruthless', baseDemand: 100, interestMult: 1.3 },
-        { name: 'Sal', personality: 'slick', baseDemand: 60, interestMult: 1.25 },
-        { name: 'Knuckles', personality: 'brute', baseDemand: 120, interestMult: 1.35 }
+        { name: 'Vinnie', baseDemand: 25, interestMult: 1.12 },
+        { name: 'Marco', baseDemand: 40, interestMult: 1.18 },
+        { name: 'Big Tony', baseDemand: 60, interestMult: 1.15 },
+        { name: 'The Butcher', baseDemand: 80, interestMult: 1.25 },
+        { name: 'Sal', baseDemand: 50, interestMult: 1.20 },
+        { name: 'Knuckles', baseDemand: 100, interestMult: 1.30 }
     ];
 
     // ========================================================================
-    // GAME STATE
+    // STATE
     // ========================================================================
     const GamePhase = {
         MENU: 'menu',
         MORNING: 'morning',
         MINING: 'mining',
+        BLOCK_CRACKED: 'block_cracked',
+        CRASHED: 'crashed',
         PAYDAY: 'payday',
         GAMEOVER: 'gameover'
     };
@@ -99,161 +97,103 @@
     const state = {
         phase: GamePhase.MENU,
         day: 1,
-
-        // Currency
-        cash: 50,
-        cashDisplay: 50,  // For tweening
+        cash: 0,
+        cashDisplay: 0,
         vig: 0,
-        vigDisplay: 0,
 
-        // Mining state
+        // Ring
         angle: 0,
         targetAngle: 0,
-        targetSize: 0.15,
-        spinSpeed: 0.04,
+        targetSize: 0.12,
+        spinSpeed: 0.035,
         isSpinning: false,
 
-        // Block progress
+        // Mining
         hashesFound: 0,
         hashesNeeded: 5,
-        hashChance: 0.5,  // 50% chance per hit
+        hashChance: 0.45,
         lastHash: '',
         lastHashValid: false,
-
-        // Strikes
-        strikes: 0,
-        maxStrikes: 3,
-
-        // Session
         sessionVig: 0,
-        blocksMinedToday: 0,
+        blocksToday: 0,
 
-        // Daily costs
-        electricityCost: 10,
-        rigDecay: 5,
+        // Costs
+        electricityCost: 8,
+        rigCost: 4,
 
-        // Loan sharks
+        // Sharks
         sharks: [],
 
-        // VIG market
-        vigPrice: 100,  // $100 per VIG
+        // Market
+        vigPrice: 100,
 
         // Stats
-        totalDaysSurvived: 0,
-        totalBlocksMined: 0,
         highScore: 0,
 
         // UI
         buttons: [],
         message: null,
-        messageTimer: 0
+        messageTimer: 0,
+        flash: null,
+        flashTimer: 0
     };
 
     // ========================================================================
-    // PARTICLE SYSTEM (Shattered Pixel Dungeon pattern)
+    // PARTICLES
     // ========================================================================
-    class Emitter {
-        constructor() {
-            this.particles = [];
-            this.x = 0;
-            this.y = 0;
-        }
+    const particles = [];
 
-        burst(x, y, color, count, speed = 100) {
-            for (let i = 0; i < count; i++) {
-                const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
-                const vel = speed * (0.5 + Math.random() * 0.5);
-                this.particles.push({
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * vel,
-                    vy: Math.sin(angle) * vel,
-                    size: 6 + Math.random() * 8,
-                    color: color,
-                    life: 0.5 + Math.random() * 0.3,
-                    maxLife: 0.8,
-                    gravity: 150
-                });
-            }
-        }
-
-        sparkUp(x, y, color, count) {
-            for (let i = 0; i < count; i++) {
-                this.particles.push({
-                    x: x + (Math.random() - 0.5) * 40,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 80,
-                    vy: -150 - Math.random() * 150,
-                    size: 5 + Math.random() * 6,
-                    color: color,
-                    life: 0.4 + Math.random() * 0.4,
-                    maxLife: 0.8,
-                    gravity: 50
-                });
-            }
-        }
-
-        update(dt) {
-            this.particles = this.particles.filter(p => {
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                p.vy += p.gravity * dt;
-                p.life -= dt;
-                return p.life > 0;
+    function spawnParticles(x, y, color, count, speed = 150) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i / count) + Math.random() * 0.3;
+            const vel = speed * (0.6 + Math.random() * 0.4);
+            particles.push({
+                x, y,
+                vx: Math.cos(angle) * vel,
+                vy: Math.sin(angle) * vel,
+                radius: 3 + Math.random() * 4,
+                color,
+                life: 1,
+                decay: 1.5 + Math.random() * 0.5
             });
         }
+    }
 
-        render(ctx) {
-            this.particles.forEach(p => {
-                const alpha = p.life / p.maxLife;
-                const size = p.size * alpha;
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = alpha;
-                // Pixel-style square particles
-                ctx.fillRect(
-                    Math.floor(p.x - size/2),
-                    Math.floor(p.y - size/2),
-                    Math.ceil(size),
-                    Math.ceil(size)
-                );
+    function spawnRising(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * 60,
+                y,
+                vx: (Math.random() - 0.5) * 30,
+                vy: -120 - Math.random() * 80,
+                radius: 3 + Math.random() * 3,
+                color,
+                life: 1,
+                decay: 1.2
             });
-            ctx.globalAlpha = 1;
         }
     }
 
     // ========================================================================
-    // NUMBER TWEENING (Satisfying counter rolls)
-    // ========================================================================
-    class Tweener {
-        static lerp(current, target, speed, dt) {
-            const diff = target - current;
-            if (Math.abs(diff) < 0.01) return target;
-            return current + diff * Math.min(1, speed * dt);
-        }
-    }
-
-    // ========================================================================
-    // CAMERA / SCREEN SHAKE (SPD pattern)
+    // CAMERA
     // ========================================================================
     const camera = {
         shakeX: 0,
         shakeY: 0,
         shakeMag: 0,
         shakeTime: 0,
-        shakeDuration: 0,
 
-        shake(magnitude, duration) {
-            this.shakeMag = magnitude;
-            this.shakeTime = duration;
-            this.shakeDuration = duration;
+        shake(mag, time) {
+            this.shakeMag = mag;
+            this.shakeTime = time;
         },
 
         update(dt) {
             if (this.shakeTime > 0) {
-                const damping = this.shakeTime / this.shakeDuration;
-                this.shakeX = (Math.random() - 0.5) * this.shakeMag * damping * 2;
-                this.shakeY = (Math.random() - 0.5) * this.shakeMag * damping * 2;
                 this.shakeTime -= dt;
+                const intensity = this.shakeTime > 0 ? this.shakeMag : 0;
+                this.shakeX = (Math.random() - 0.5) * intensity * 2;
+                this.shakeY = (Math.random() - 0.5) * intensity * 2;
             } else {
                 this.shakeX = 0;
                 this.shakeY = 0;
@@ -262,71 +202,60 @@
     };
 
     // ========================================================================
-    // CANVAS SETUP
+    // CANVAS
     // ========================================================================
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    let W, H, scale, centerX, centerY, ringRadius;
-    const emitter = new Emitter();
+    let W, H, cx, cy, ringR;
 
     function resize() {
-        const container = document.getElementById('game');
-        W = container.clientWidth;
-        H = container.clientHeight;
-
-        // Simple: canvas fills the screen
+        W = window.innerWidth;
+        H = window.innerHeight;
         canvas.width = W;
         canvas.height = H;
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
 
-        centerX = W / 2;
-        centerY = H * 0.38;
-        ringRadius = Math.min(W, H) * 0.32;
-
-        // Scale factor for UI elements (base on screen width)
-        scale = Math.min(W / 400, H / 700) * 2;
-        scale = Math.max(scale, 1.5); // Minimum scale
-
-        // Disable anti-aliasing for pixel art
-        ctx.imageSmoothingEnabled = false;
+        cx = W / 2;
+        cy = H * 0.38;
+        ringR = Math.min(W * 0.38, H * 0.22);
     }
 
     // ========================================================================
-    // HASH GENERATION (Visual flavor)
+    // HELPERS
     // ========================================================================
     function generateHash() {
         const chars = '0123456789ABCDEF';
-        let hash = '';
-        for (let i = 0; i < 8; i++) {
-            hash += chars[Math.floor(Math.random() * chars.length)];
-        }
-        return hash;
+        let h = '';
+        for (let i = 0; i < 8; i++) h += chars[Math.floor(Math.random() * 16)];
+        return h;
     }
 
-    function checkHashValid(day) {
-        // Probability decreases with day
-        const baseChance = state.hashChance - (day - 1) * 0.03;
-        const chance = Math.max(0.15, baseChance);
-        return Math.random() < chance;
+    function lerp(a, b, t) {
+        return a + (b - a) * Math.min(1, t);
+    }
+
+    function showMessage(text, color) {
+        state.message = { text, color };
+        state.messageTimer = 1.2;
+    }
+
+    function flash(color) {
+        state.flash = color;
+        state.flashTimer = 0.15;
     }
 
     // ========================================================================
-    // SHARK MANAGEMENT
+    // SHARK LOGIC
     // ========================================================================
     function addShark() {
-        const available = SHARKS.filter(s =>
-            !state.sharks.find(existing => existing.name === s.name)
-        );
-        if (available.length === 0) return null;
+        const available = SHARKS.filter(s => !state.sharks.find(x => x.name === s.name));
+        if (!available.length) return null;
 
         const template = available[Math.floor(Math.random() * available.length)];
         const shark = {
             ...template,
             strikes: 0,
             demand: template.baseDemand,
-            mood: 'neutral',  // neutral, warning, angry
-            loanAmount: 100 + state.sharks.length * 50
+            loanAmount: 80 + state.sharks.length * 40
         };
         state.sharks.push(shark);
         return shark;
@@ -334,85 +263,68 @@
 
     function updateSharkDemands() {
         state.sharks.forEach(s => {
-            s.demand = Math.floor(s.baseDemand * Math.pow(s.interestMult, state.day - 1));
+            s.demand = Math.ceil(s.baseDemand * Math.pow(s.interestMult, state.day - 1));
         });
     }
 
     // ========================================================================
-    // GAME LOGIC
+    // GAME FLOW
     // ========================================================================
     function startGame() {
-        state.phase = GamePhase.MORNING;
         state.day = 1;
-        state.cash = 50;
-        state.cashDisplay = 50;
+        state.cash = 40;
+        state.cashDisplay = 40;
         state.vig = 0;
-        state.vigDisplay = 0;
-        state.strikes = 0;
         state.sharks = [];
         state.sessionVig = 0;
-        state.blocksMinedToday = 0;
-        state.totalDaysSurvived = 0;
-        state.totalBlocksMined = 0;
+        state.blocksToday = 0;
         state.vigPrice = 100;
-        state.hashesFound = 0;
         state.hashesNeeded = 5;
-        state.hashChance = 0.5;
-        state.electricityCost = 10;
-        state.rigDecay = 5;
+        state.hashChance = 0.45;
+        state.electricityCost = 8;
+        state.rigCost = 4;
 
-        // Start with one shark
         addShark();
-
         showMorning();
     }
 
     function showMorning() {
         state.phase = GamePhase.MORNING;
-        state.strikes = 0;
         state.sessionVig = 0;
-        state.blocksMinedToday = 0;
+        state.blocksToday = 0;
 
-        // Update difficulty
-        state.hashesNeeded = Math.min(12, 5 + Math.floor((state.day - 1) / 2));
-        state.hashChance = Math.max(0.2, 0.5 - (state.day - 1) * 0.025);
-        state.spinSpeed = 0.04 + (state.day - 1) * 0.003;
-        state.targetSize = Math.max(0.08, 0.15 - (state.day - 1) * 0.005);
+        // Scale difficulty
+        state.hashesNeeded = Math.min(10, 5 + Math.floor(state.day / 3));
+        state.hashChance = Math.max(0.25, 0.45 - state.day * 0.015);
+        state.spinSpeed = Math.min(0.07, 0.035 + state.day * 0.002);
+        state.targetSize = Math.max(0.08, 0.12 - state.day * 0.003);
 
-        // Update costs
-        state.electricityCost = 10 + (state.day - 1) * 3;
-        state.rigDecay = 5 + (state.day - 1) * 2;
+        state.electricityCost = 8 + state.day * 2;
+        state.rigCost = 4 + state.day;
 
-        // Update shark demands
         updateSharkDemands();
 
-        // Update VIG price (random walk with slight downward bias)
-        const priceChange = (Math.random() - 0.55) * 20;
-        state.vigPrice = Math.max(30, state.vigPrice + priceChange);
+        // VIG price fluctuation
+        state.vigPrice = Math.max(40, state.vigPrice + (Math.random() - 0.52) * 25);
 
-        // Calculate total owed
-        const totalOwed = state.sharks.reduce((sum, s) => sum + s.demand, 0);
-
-        state.buttons = [
-            {
-                id: 'start_mining',
-                text: 'START MINING',
-                x: centerX,
-                y: H * 0.85,
-                w: 220 * scale,
-                h: 55 * scale,
-                color: COLORS.primary,
-                action: startMining
-            }
-        ];
+        state.buttons = [{
+            id: 'mine',
+            text: 'START MINING',
+            x: cx,
+            y: H * 0.82,
+            w: 220,
+            h: 56,
+            color: COLORS.primary,
+            action: startMining
+        }];
     }
 
     function startMining() {
         state.phase = GamePhase.MINING;
         state.isSpinning = true;
+        state.hashesFound = 0;
         state.angle = Math.random() * Math.PI * 2;
         state.targetAngle = Math.random() * Math.PI * 2;
-        state.hashesFound = 0;
         state.lastHash = '';
         state.buttons = [];
     }
@@ -422,22 +334,20 @@
 
         state.isSpinning = false;
 
-        // Check if in target zone
-        const targetStart = state.targetAngle;
-        const targetEnd = targetStart + (Math.PI * 2 * state.targetSize);
+        // Check hit
+        const tStart = state.targetAngle;
+        const tEnd = tStart + Math.PI * 2 * state.targetSize;
+        let a = state.angle % (Math.PI * 2);
+        if (a < 0) a += Math.PI * 2;
 
-        let angle = state.angle % (Math.PI * 2);
-        if (angle < 0) angle += Math.PI * 2;
-
-        let inZone = false;
-        if (targetEnd > Math.PI * 2) {
-            // Zone wraps around
-            inZone = angle >= targetStart || angle <= (targetEnd % (Math.PI * 2));
+        let hit = false;
+        if (tEnd > Math.PI * 2) {
+            hit = a >= tStart || a <= (tEnd % (Math.PI * 2));
         } else {
-            inZone = angle >= targetStart && angle <= targetEnd;
+            hit = a >= tStart && a <= tEnd;
         }
 
-        if (inZone) {
+        if (hit) {
             onHit();
         } else {
             onMiss();
@@ -445,775 +355,657 @@
     }
 
     function onHit() {
-        // Generate hash and check if valid
-        state.lastHash = generateHash();
-        state.lastHashValid = checkHashValid(state.day);
+        const hx = cx + Math.cos(state.angle) * ringR;
+        const hy = cy + Math.sin(state.angle) * ringR;
 
-        const hitX = centerX + Math.cos(state.angle) * ringRadius;
-        const hitY = centerY + Math.sin(state.angle) * ringRadius;
+        state.lastHash = generateHash();
+        state.lastHashValid = Math.random() < state.hashChance;
 
         if (state.lastHashValid) {
-            // Valid hash!
             state.hashesFound++;
-            emitter.burst(hitX, hitY, COLORS.success, 15, 80);
-            emitter.sparkUp(hitX, hitY, COLORS.primary, 8);
-            showMessage('+1 HASH', COLORS.success);
+            spawnParticles(hx, hy, COLORS.success, 12, 100);
+            flash(COLORS.successGlow);
 
             if (state.hashesFound >= state.hashesNeeded) {
-                // Block cracked!
                 crackBlock();
                 return;
             }
         } else {
-            // Invalid hash, but not a miss
-            emitter.burst(hitX, hitY, COLORS.textDim, 8, 40);
-            showMessage('INVALID', COLORS.textDim);
+            spawnParticles(hx, hy, COLORS.textMuted, 6, 50);
         }
 
-        // Continue mining
+        // Continue
         setTimeout(() => {
             if (state.phase === GamePhase.MINING) {
                 state.isSpinning = true;
                 state.targetAngle = Math.random() * Math.PI * 2;
             }
-        }, 300);
+        }, 200);
     }
 
     function onMiss() {
-        state.strikes++;
-        camera.shake(15, 0.4);
-        emitter.burst(centerX, centerY, COLORS.danger, 20, 120);
-        showMessage('MISS!', COLORS.danger);
+        // ONE MISS = DONE
+        state.phase = GamePhase.CRASHED;
+        camera.shake(25, 0.5);
+        flash(COLORS.dangerGlow);
+        spawnParticles(cx, cy, COLORS.danger, 30, 200);
+        showMessage('RIG CRASHED!', COLORS.danger);
 
-        if (state.strikes >= state.maxStrikes) {
-            // Rig crashed, end day early
-            setTimeout(() => endDay(true), 800);
-        } else {
-            setTimeout(() => {
-                if (state.phase === GamePhase.MINING) {
-                    state.isSpinning = true;
-                    state.targetAngle = Math.random() * Math.PI * 2;
-                }
-            }, 500);
-        }
+        // Lose session earnings
+        state.sessionVig = 0;
+
+        setTimeout(() => {
+            endDay();
+        }, 1500);
     }
 
     function crackBlock() {
-        // Block cracked!
-        state.blocksMinedToday++;
-        state.totalBlocksMined++;
+        state.phase = GamePhase.BLOCK_CRACKED;
+        state.blocksToday++;
 
-        const vigEarned = 0.1 + Math.random() * 0.05;
-        state.vig += vigEarned;
-        state.sessionVig += vigEarned;
+        const earned = 0.08 + Math.random() * 0.04;
+        state.vig += earned;
+        state.sessionVig += earned;
 
-        camera.shake(8, 0.3);
-        emitter.burst(centerX, centerY, COLORS.primary, 25, 150);
-        emitter.sparkUp(centerX, centerY - 50, COLORS.success, 15);
+        camera.shake(10, 0.3);
+        flash(COLORS.primaryGlow);
+        spawnParticles(cx, cy, COLORS.primary, 20, 150);
+        spawnRising(cx, cy - 30, COLORS.success, 10);
         showMessage('BLOCK CRACKED!', COLORS.primary);
 
-        // Show choice: continue or cash out
         setTimeout(() => {
-            if (state.phase === GamePhase.MINING) {
-                showMiningChoice();
-            }
+            state.buttons = [
+                {
+                    id: 'endday',
+                    text: 'CASH OUT',
+                    x: cx - 80,
+                    y: H * 0.72,
+                    w: 140,
+                    h: 50,
+                    color: COLORS.success,
+                    action: endDay
+                },
+                {
+                    id: 'continue',
+                    text: 'KEEP GOING',
+                    x: cx + 80,
+                    y: H * 0.72,
+                    w: 140,
+                    h: 50,
+                    color: COLORS.purple,
+                    action: continuesMining
+                }
+            ];
         }, 600);
     }
 
-    function showMiningChoice() {
-        state.isSpinning = false;
-        state.buttons = [
-            {
-                id: 'cash_out',
-                text: 'END DAY',
-                x: centerX - 90 * scale,
-                y: H * 0.78,
-                w: 150 * scale,
-                h: 50 * scale,
-                color: COLORS.success,
-                action: () => endDay(false)
-            },
-            {
-                id: 'continue',
-                text: 'CONTINUE',
-                x: centerX + 90 * scale,
-                y: H * 0.78,
-                w: 150 * scale,
-                h: 50 * scale,
-                color: COLORS.purple,
-                action: continueMining
-            }
-        ];
-    }
-
-    function continueMining() {
-        state.buttons = [];
-        state.hashesFound = 0;
+    function continuesMining() {
+        state.phase = GamePhase.MINING;
         state.isSpinning = true;
+        state.hashesFound = 0;
         state.targetAngle = Math.random() * Math.PI * 2;
+        state.buttons = [];
     }
 
-    function endDay(crashed) {
-        state.phase = GamePhase.PAYDAY;
-        state.isSpinning = false;
-        state.buttons = [];
-
+    function endDay() {
         // Convert VIG to cash
-        const cashEarned = state.sessionVig * state.vigPrice;
-        state.cash += cashEarned;
+        const earned = state.sessionVig * state.vigPrice;
+        state.cash += earned;
         state.vig = 0;
         state.sessionVig = 0;
 
-        // Deduct daily costs
+        // Deduct costs
         state.cash -= state.electricityCost;
-        state.cash -= state.rigDecay;
+        state.cash -= state.rigCost;
+        state.cash = Math.max(0, state.cash);
 
-        if (crashed) {
-            showMessage('RIG CRASHED!', COLORS.danger);
-        }
-
-        setTimeout(() => showPayday(), crashed ? 1000 : 500);
-    }
-
-    function showPayday() {
-        state.buttons = [];
-        renderPayday();
-    }
-
-    function payShark(index) {
-        const shark = state.sharks[index];
-        if (state.cash >= shark.demand) {
-            state.cash -= shark.demand;
-            shark.mood = 'neutral';
-            emitter.sparkUp(centerX, H * 0.5, COLORS.success, 10);
-        }
-        renderPayday();
-    }
-
-    function skipShark(index) {
-        const shark = state.sharks[index];
-        shark.strikes++;
-
-        if (shark.strikes >= 3) {
-            shark.mood = 'angry';
-            gameOver(shark.name + ' COLLECTED');
-            return;
-        }
-
-        shark.mood = shark.strikes >= 2 ? 'angry' : 'warning';
-        camera.shake(5, 0.2);
-        renderPayday();
-    }
-
-    function takeLoan() {
-        const shark = addShark();
-        if (shark) {
-            state.cash += shark.loanAmount;
-            emitter.sparkUp(centerX, H * 0.5, COLORS.primary, 15);
-            showMessage('+$' + shark.loanAmount, COLORS.success);
-        }
-        renderPayday();
-    }
-
-    function nextDay() {
-        state.day++;
-        state.totalDaysSurvived++;
-        showMorning();
-    }
-
-    function renderPayday() {
-        // Build buttons for payday screen
+        state.phase = GamePhase.PAYDAY;
         state.buttons = [];
 
-        let y = H * 0.27;
-        const cardH = 70 * scale;
-        const cardW = W * 0.85;
-        const btnH = 40 * scale;
-        const btnW = 100 * scale;
+        setTimeout(buildPaydayButtons, 300);
+    }
 
-        state.sharks.forEach((shark, i) => {
-            const canPay = state.cash >= shark.demand;
-            const paid = shark.mood === 'paid';
-            const cardY = y + i * (cardH + 15 * scale);
+    function buildPaydayButtons() {
+        state.buttons = [];
 
-            if (!paid) {
-                // Buttons go below each card
-                state.buttons.push({
-                    id: 'pay_' + i,
-                    text: 'PAY',
-                    x: centerX - 60 * scale,
-                    y: cardY + cardH + 25 * scale,
-                    w: btnW,
-                    h: btnH,
-                    color: canPay ? COLORS.success : COLORS.textDim,
-                    action: canPay ? () => payShark(i) : null
-                });
+        // Pay/skip buttons handled in render via tap detection
 
-                state.buttons.push({
-                    id: 'skip_' + i,
-                    text: 'SKIP',
-                    x: centerX + 60 * scale,
-                    y: cardY + cardH + 25 * scale,
-                    w: btnW,
-                    h: btnH,
-                    color: COLORS.danger,
-                    action: () => skipShark(i)
-                });
-            }
-        });
+        const hasMore = state.sharks.length < SHARKS.length;
 
-        // Bottom buttons
-        const bottomY = H * 0.88;
-
-        // New loan button
-        const hasAvailableSharks = state.sharks.length < SHARKS.length;
-        if (hasAvailableSharks) {
+        if (hasMore) {
             state.buttons.push({
-                id: 'new_loan',
-                text: '+ LOAN',
-                x: centerX - 100 * scale,
-                y: bottomY,
-                w: 130 * scale,
-                h: 45 * scale,
+                id: 'loan',
+                text: '+ NEW LOAN',
+                x: cx,
+                y: H * 0.78,
+                w: 160,
+                h: 48,
                 color: COLORS.warning,
-                action: takeLoan
+                action: () => {
+                    const s = addShark();
+                    if (s) {
+                        state.cash += s.loanAmount;
+                        spawnRising(cx, H * 0.5, COLORS.warning, 12);
+                        showMessage('+$' + s.loanAmount, COLORS.success);
+                        buildPaydayButtons();
+                    }
+                }
             });
         }
 
-        // Next day button
         state.buttons.push({
-            id: 'next_day',
+            id: 'next',
             text: 'NEXT DAY',
-            x: hasAvailableSharks ? centerX + 100 * scale : centerX,
-            y: bottomY,
-            w: 160 * scale,
-            h: 45 * scale,
+            x: cx,
+            y: H * 0.88,
+            w: 180,
+            h: 52,
             color: COLORS.primary,
-            action: nextDay
+            action: () => {
+                state.day++;
+                showMorning();
+            }
         });
+    }
+
+    function payShark(i) {
+        const s = state.sharks[i];
+        if (state.cash >= s.demand) {
+            state.cash -= s.demand;
+            s.paid = true;
+            spawnRising(cx, H * 0.4, COLORS.success, 8);
+        }
+    }
+
+    function skipShark(i) {
+        const s = state.sharks[i];
+        s.strikes++;
+        s.paid = true;
+        camera.shake(8, 0.2);
+
+        if (s.strikes >= 3) {
+            gameOver(s.name + ' collected.');
+        }
     }
 
     function gameOver(reason) {
         state.phase = GamePhase.GAMEOVER;
-        state.buttons = [];
+        state.gameOverReason = reason;
 
-        // Update high score
-        if (state.totalDaysSurvived > state.highScore) {
-            state.highScore = state.totalDaysSurvived;
-            localStorage.setItem('vig_highscore', state.highScore);
+        if (state.day > state.highScore) {
+            state.highScore = state.day;
+            localStorage.setItem('vig_hs', state.highScore);
         }
 
-        camera.shake(20, 0.5);
+        camera.shake(30, 0.6);
+        flash(COLORS.dangerGlow);
 
         setTimeout(() => {
             state.buttons = [{
                 id: 'restart',
                 text: 'TRY AGAIN',
-                x: centerX,
-                y: H * 0.80,
-                w: 200 * scale,
-                h: 55 * scale,
+                x: cx,
+                y: H * 0.75,
+                w: 180,
+                h: 56,
                 color: COLORS.primary,
                 action: startGame
             }];
-        }, 1500);
-    }
-
-    function showMessage(text, color) {
-        state.message = { text, color };
-        state.messageTimer = 1.0;
+        }, 1000);
     }
 
     // ========================================================================
-    // INPUT HANDLING
+    // INPUT
     // ========================================================================
     function handleInput(x, y) {
-        // Check buttons first
-        for (const btn of state.buttons) {
-            if (btn.action &&
-                x >= btn.x - btn.w/2 && x <= btn.x + btn.w/2 &&
-                y >= btn.y - btn.h/2 && y <= btn.y + btn.h/2) {
-                btn.action();
+        // Check buttons
+        for (const b of state.buttons) {
+            if (b.action && x >= b.x - b.w/2 && x <= b.x + b.w/2 && y >= b.y - b.h/2 && y <= b.y + b.h/2) {
+                b.action();
                 return;
             }
         }
 
-        // Otherwise handle tap
+        // Payday shark buttons
+        if (state.phase === GamePhase.PAYDAY) {
+            const cardW = W * 0.85;
+            const cardH = 80;
+            const startY = H * 0.22;
+
+            state.sharks.forEach((s, i) => {
+                if (s.paid) return;
+
+                const cardY = startY + i * (cardH + 12);
+                const btnY = cardY + cardH/2;
+                const payX = cx + cardW/2 - 110;
+                const skipX = cx + cardW/2 - 45;
+
+                // Pay button
+                if (x >= payX - 30 && x <= payX + 30 && y >= btnY - 18 && y <= btnY + 18) {
+                    payShark(i);
+                    return;
+                }
+                // Skip button
+                if (x >= skipX - 25 && x <= skipX + 25 && y >= btnY - 18 && y <= btnY + 18) {
+                    skipShark(i);
+                    return;
+                }
+            });
+        }
+
+        // Mining tap
         if (state.phase === GamePhase.MINING) {
             handleTap();
         }
     }
 
-    canvas.addEventListener('touchstart', (e) => {
+    canvas.addEventListener('touchstart', e => {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const touch = e.touches[0];
-        const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
-        handleInput(x, y);
+        const t = e.touches[0];
+        const r = canvas.getBoundingClientRect();
+        handleInput(t.clientX - r.left, t.clientY - r.top);
     }, { passive: false });
 
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-        handleInput(x, y);
+    canvas.addEventListener('mousedown', e => {
+        const r = canvas.getBoundingClientRect();
+        handleInput(e.clientX - r.left, e.clientY - r.top);
     });
 
     // ========================================================================
-    // GAME LOOPS (Universal Paperclips pattern: separate update speeds)
+    // UPDATE
     // ========================================================================
     let lastTime = 0;
 
-    // Fast loop: Mining physics, particles (60fps)
-    function fastUpdate(dt) {
+    function update(dt) {
         // Spin
         if (state.isSpinning) {
             state.angle += state.spinSpeed;
-            if (state.angle > Math.PI * 2) state.angle -= Math.PI * 2;
         }
 
         // Particles
-        emitter.update(dt);
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += 300 * dt;
+            p.life -= p.decay * dt;
+            if (p.life <= 0) particles.splice(i, 1);
+        }
 
         // Camera
         camera.update(dt);
 
-        // Number tweening
-        state.cashDisplay = Tweener.lerp(state.cashDisplay, state.cash, 8, dt);
-        state.vigDisplay = Tweener.lerp(state.vigDisplay, state.vig, 8, dt);
+        // Tweens
+        state.cashDisplay = lerp(state.cashDisplay, state.cash, dt * 10);
 
-        // Message timer
-        if (state.messageTimer > 0) {
-            state.messageTimer -= dt;
-        }
+        // Message
+        if (state.messageTimer > 0) state.messageTimer -= dt;
+
+        // Flash
+        if (state.flashTimer > 0) state.flashTimer -= dt;
     }
 
-    // Render loop
+    // ========================================================================
+    // RENDER
+    // ========================================================================
     function render() {
         ctx.save();
-        ctx.translate(Math.floor(camera.shakeX), Math.floor(camera.shakeY));
+        ctx.translate(camera.shakeX, camera.shakeY);
 
-        // Clear
+        // BG
         ctx.fillStyle = COLORS.bg;
-        ctx.fillRect(-10, -10, W + 20, H + 20);
+        ctx.fillRect(-50, -50, W + 100, H + 100);
+
+        // Flash
+        if (state.flashTimer > 0 && state.flash) {
+            ctx.fillStyle = state.flash;
+            ctx.fillRect(0, 0, W, H);
+        }
 
         switch (state.phase) {
-            case GamePhase.MENU:
-                renderMenu();
-                break;
-            case GamePhase.MORNING:
-                renderMorning();
-                break;
+            case GamePhase.MENU: renderMenu(); break;
+            case GamePhase.MORNING: renderMorning(); break;
             case GamePhase.MINING:
-                renderMining();
-                break;
-            case GamePhase.PAYDAY:
-                renderPaydayScreen();
-                break;
-            case GamePhase.GAMEOVER:
-                renderGameOver();
-                break;
+            case GamePhase.BLOCK_CRACKED:
+            case GamePhase.CRASHED:
+                renderMining(); break;
+            case GamePhase.PAYDAY: renderPayday(); break;
+            case GamePhase.GAMEOVER: renderGameOver(); break;
         }
 
-        // Render particles on top
-        emitter.render(ctx);
+        // Particles
+        particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life;
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
 
-        // Render message
+        // Message
         if (state.messageTimer > 0 && state.message) {
-            const alpha = Math.min(1, state.messageTimer * 2);
-            ctx.globalAlpha = alpha;
+            ctx.globalAlpha = Math.min(1, state.messageTimer * 2);
+            ctx.font = '700 28px Orbitron';
             ctx.fillStyle = state.message.color;
-            ctx.font = `${20 * scale}px 'Press Start 2P'`;
             ctx.textAlign = 'center';
-            ctx.fillText(state.message.text, centerX, centerY - ringRadius - 50 * scale);
+            ctx.fillText(state.message.text, cx, cy - ringR - 50);
             ctx.globalAlpha = 1;
         }
+
+        // Buttons
+        state.buttons.forEach(renderButton);
 
         ctx.restore();
     }
 
     function renderMenu() {
         // Title
+        ctx.font = '900 64px Orbitron';
         ctx.fillStyle = COLORS.primary;
-        ctx.font = `${48 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('VIG', centerX, H * 0.3);
+        ctx.fillText('VIG', cx, H * 0.32);
 
-        // Subtitle
-        ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${10 * scale}px 'Press Start 2P'`;
-        ctx.fillText('MINE CRYPTO. PAY SHARKS.', centerX, H * 0.40);
-        ctx.fillText('SURVIVE.', centerX, H * 0.45);
+        // Tagline
+        ctx.font = '400 16px Inter';
+        ctx.fillStyle = COLORS.textSecondary;
+        ctx.fillText('Mine crypto. Pay sharks. Survive.', cx, H * 0.40);
 
         // High score
         if (state.highScore > 0) {
+            ctx.font = '600 18px Inter';
             ctx.fillStyle = COLORS.purple;
-            ctx.font = `${12 * scale}px 'Press Start 2P'`;
-            ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.55);
+            ctx.fillText('Best: ' + state.highScore + ' days', cx, H * 0.50);
         }
 
-        // Start button
-        renderButton({
-            text: 'START',
-            x: centerX,
-            y: H * 0.70,
-            w: 180 * scale,
-            h: 60 * scale,
-            color: COLORS.primary
-        });
-
-        state.buttons = [{
-            id: 'start',
-            text: 'START',
-            x: centerX,
-            y: H * 0.70,
-            w: 180 * scale,
-            h: 60 * scale,
-            color: COLORS.primary,
-            action: startGame
-        }];
+        // Warning
+        ctx.font = '600 14px Inter';
+        ctx.fillStyle = COLORS.danger;
+        ctx.fillText('One miss and you\'re done.', cx, H * 0.58);
     }
 
     function renderMorning() {
-        // Header
+        // Day
+        ctx.font = '700 24px Orbitron';
         ctx.fillStyle = COLORS.text;
-        ctx.font = `${18 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('DAY ' + state.day, centerX, H * 0.08);
+        ctx.fillText('DAY ' + state.day, cx, H * 0.08);
 
         // Cash
+        ctx.font = '900 42px Orbitron';
         ctx.fillStyle = COLORS.success;
-        ctx.font = `${28 * scale}px 'Press Start 2P'`;
-        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.16);
+        ctx.fillText('$' + Math.floor(state.cashDisplay), cx, H * 0.17);
 
-        // Daily costs
-        ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${11 * scale}px 'Press Start 2P'`;
-        let y = H * 0.26;
-        ctx.fillText('DAILY COSTS:', centerX, y);
+        // Costs section
+        ctx.font = '600 14px Inter';
+        ctx.fillStyle = COLORS.textSecondary;
+        ctx.fillText('DAILY COSTS', cx, H * 0.26);
 
+        ctx.font = '400 16px Inter';
         ctx.fillStyle = COLORS.danger;
-        ctx.font = `${10 * scale}px 'Press Start 2P'`;
-        y += 28 * scale;
-        ctx.fillText('ELECTRICITY: -$' + state.electricityCost, centerX, y);
-        y += 22 * scale;
-        ctx.fillText('RIG DECAY: -$' + state.rigDecay, centerX, y);
+        ctx.fillText('Electricity: -$' + state.electricityCost, cx, H * 0.31);
+        ctx.fillText('Rig decay: -$' + state.rigCost, cx, H * 0.36);
 
-        // Shark payments due
-        y += 40 * scale;
-        ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${11 * scale}px 'Press Start 2P'`;
-        ctx.fillText('SHARKS WANT:', centerX, y);
+        // Sharks want
+        const total = state.sharks.reduce((s, x) => s + x.demand, 0);
+        ctx.font = '600 14px Inter';
+        ctx.fillStyle = COLORS.textSecondary;
+        ctx.fillText('SHARKS WANT', cx, H * 0.45);
 
-        const totalOwed = state.sharks.reduce((sum, s) => sum + s.demand, 0);
-        y += 28 * scale;
+        ctx.font = '700 32px Orbitron';
         ctx.fillStyle = COLORS.warning;
-        ctx.font = `${22 * scale}px 'Press Start 2P'`;
-        ctx.fillText('$' + totalOwed, centerX, y);
+        ctx.fillText('$' + total, cx, H * 0.52);
 
-        // Mining info
-        y += 50 * scale;
-        ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${9 * scale}px 'Press Start 2P'`;
-        ctx.fillText('HASH CHANCE: ' + Math.floor(state.hashChance * 100) + '%', centerX, y);
-        y += 22 * scale;
-        ctx.fillText('HASHES/BLOCK: ' + state.hashesNeeded, centerX, y);
-        y += 22 * scale;
-        ctx.fillText('VIG PRICE: $' + Math.floor(state.vigPrice), centerX, y);
-
-        // Render buttons
-        state.buttons.forEach(renderButton);
+        // Mining stats
+        ctx.font = '400 13px Inter';
+        ctx.fillStyle = COLORS.textMuted;
+        ctx.fillText('Hash chance: ' + Math.floor(state.hashChance * 100) + '%  |  Hashes needed: ' + state.hashesNeeded, cx, H * 0.62);
+        ctx.fillText('VIG price: $' + Math.floor(state.vigPrice), cx, H * 0.67);
     }
 
     function renderMining() {
-        // Header bar
-        const headerY = 35 * scale;
-
-        // Cash (left)
-        ctx.fillStyle = COLORS.success;
-        ctx.font = `${14 * scale}px 'Press Start 2P'`;
+        // Header
+        ctx.font = '600 16px Inter';
         ctx.textAlign = 'left';
-        ctx.fillText('$' + Math.floor(state.cashDisplay), 20 * scale, headerY);
+        ctx.fillStyle = COLORS.success;
+        ctx.fillText('$' + Math.floor(state.cashDisplay), 20, 35);
 
-        // Day (center)
-        ctx.fillStyle = COLORS.text;
-        ctx.font = `${12 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('DAY ' + state.day, centerX, headerY);
+        ctx.fillStyle = COLORS.text;
+        ctx.fillText('DAY ' + state.day, cx, 35);
 
-        // VIG (right)
-        ctx.fillStyle = COLORS.primary;
-        ctx.font = `${14 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'right';
-        ctx.fillText(state.vigDisplay.toFixed(2) + ' VIG', W - 20 * scale, headerY);
+        ctx.fillStyle = COLORS.primary;
+        ctx.fillText(state.sessionVig.toFixed(3) + ' VIG', W - 20, 35);
 
-        // Strikes
-        ctx.textAlign = 'center';
-        ctx.fillStyle = COLORS.text;
-        ctx.font = `${16 * scale}px 'Press Start 2P'`;
-        let strikeText = '';
-        for (let i = 0; i < state.maxStrikes; i++) {
-            strikeText += i < state.strikes ? '✗ ' : '○ ';
-        }
-        ctx.fillText(strikeText, centerX, 65 * scale);
+        // Ring glow
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR + 20, 0, Math.PI * 2);
+        const glow = ctx.createRadialGradient(cx, cy, ringR - 10, cx, cy, ringR + 40);
+        glow.addColorStop(0, 'transparent');
+        glow.addColorStop(0.5, COLORS.primaryGlow);
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.fill();
 
-        // Draw pixel ring
-        drawPixelRing(centerX, centerY, ringRadius, COLORS.bgLight, 12 * scale);
+        // Ring track
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = COLORS.border;
+        ctx.lineWidth = 14;
+        ctx.stroke();
 
-        // Draw target zone
-        drawPixelArc(
-            centerX, centerY, ringRadius,
-            state.targetAngle,
-            state.targetAngle + Math.PI * 2 * state.targetSize,
-            COLORS.primary, 16 * scale
-        );
+        // Target zone
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR, state.targetAngle, state.targetAngle + Math.PI * 2 * state.targetSize);
+        ctx.strokeStyle = COLORS.primary;
+        ctx.lineWidth = 16;
+        ctx.stroke();
 
-        // Draw spinner
-        if (state.phase === GamePhase.MINING) {
-            const spinX = centerX + Math.cos(state.angle) * ringRadius;
-            const spinY = centerY + Math.sin(state.angle) * ringRadius;
+        // Spinner
+        const sx = cx + Math.cos(state.angle) * ringR;
+        const sy = cy + Math.sin(state.angle) * ringR;
 
-            // Trail
-            for (let i = 1; i <= 5; i++) {
-                const trailAngle = state.angle - i * 0.1;
-                const tx = centerX + Math.cos(trailAngle) * ringRadius;
-                const ty = centerY + Math.sin(trailAngle) * ringRadius;
-                const size = (20 - i * 3) * scale;
-                ctx.fillStyle = COLORS.text;
-                ctx.globalAlpha = (5 - i) / 5 * 0.5;
-                ctx.fillRect(
-                    Math.floor(tx - size/2),
-                    Math.floor(ty - size/2),
-                    Math.ceil(size),
-                    Math.ceil(size)
-                );
-            }
-            ctx.globalAlpha = 1;
-
-            // Main dot
-            const dotSize = 24 * scale;
+        // Trail
+        for (let i = 1; i <= 6; i++) {
+            const ta = state.angle - i * 0.08;
+            const tx = cx + Math.cos(ta) * ringR;
+            const ty = cy + Math.sin(ta) * ringR;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 10 - i, 0, Math.PI * 2);
             ctx.fillStyle = COLORS.text;
-            ctx.fillRect(
-                Math.floor(spinX - dotSize/2),
-                Math.floor(spinY - dotSize/2),
-                Math.ceil(dotSize),
-                Math.ceil(dotSize)
-            );
+            ctx.globalAlpha = (6 - i) / 6 * 0.4;
+            ctx.fill();
         }
+        ctx.globalAlpha = 1;
 
-        // Hash progress
-        const progressY = centerY + ringRadius + 50 * scale;
-        ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${12 * scale}px 'Press Start 2P'`;
+        // Main dot
+        ctx.beginPath();
+        ctx.arc(sx, sy, 12, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+
+        // Progress
+        const progY = cy + ringR + 50;
+        ctx.font = '600 14px Inter';
+        ctx.fillStyle = COLORS.textSecondary;
         ctx.textAlign = 'center';
-        ctx.fillText('HASHES: ' + state.hashesFound + '/' + state.hashesNeeded, centerX, progressY);
+        ctx.fillText('HASHES: ' + state.hashesFound + ' / ' + state.hashesNeeded, cx, progY);
 
         // Progress bar
         const barW = W * 0.7;
-        const barH = 20 * scale;
-        const barX = centerX - barW / 2;
-        const barY = progressY + 15 * scale;
+        const barH = 12;
+        const barX = cx - barW / 2;
+        const barY = progY + 15;
 
-        ctx.fillStyle = COLORS.bgLight;
+        ctx.fillStyle = COLORS.bgCard;
         ctx.fillRect(barX, barY, barW, barH);
 
-        const progress = state.hashesFound / state.hashesNeeded;
         ctx.fillStyle = COLORS.primary;
-        ctx.fillRect(barX, barY, barW * progress, barH);
+        ctx.fillRect(barX, barY, barW * (state.hashesFound / state.hashesNeeded), barH);
 
-        // Border
-        ctx.strokeStyle = COLORS.textDim;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = COLORS.border;
+        ctx.lineWidth = 1;
         ctx.strokeRect(barX, barY, barW, barH);
 
         // Last hash
         if (state.lastHash) {
-            ctx.fillStyle = state.lastHashValid ? COLORS.success : COLORS.textDim;
-            ctx.font = `${11 * scale}px 'Press Start 2P'`;
-            ctx.fillText(state.lastHash + (state.lastHashValid ? ' ✓' : ' ✗'), centerX, barY + barH + 30 * scale);
+            ctx.font = '600 14px Inter';
+            ctx.fillStyle = state.lastHashValid ? COLORS.success : COLORS.textMuted;
+            ctx.fillText(state.lastHash + (state.lastHashValid ? ' ✓' : ''), cx, barY + 40);
         }
 
         // Tap prompt
         if (state.isSpinning) {
+            ctx.font = '600 18px Inter';
             ctx.fillStyle = COLORS.textMuted;
-            ctx.font = `${14 * scale}px 'Press Start 2P'`;
-            ctx.fillText('TAP TO HASH', centerX, H * 0.90);
+            ctx.fillText('TAP TO HASH', cx, H * 0.88);
         }
-
-        // Render buttons (for choice screen)
-        state.buttons.forEach(renderButton);
     }
 
-    function renderPaydayScreen() {
+    function renderPayday() {
         // Header
+        ctx.font = '700 28px Orbitron';
         ctx.fillStyle = COLORS.warning;
-        ctx.font = `${22 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('PAYDAY', centerX, H * 0.07);
+        ctx.fillText('PAYDAY', cx, H * 0.06);
 
         // Cash
+        ctx.font = '900 38px Orbitron';
         ctx.fillStyle = COLORS.success;
-        ctx.font = `${28 * scale}px 'Press Start 2P'`;
-        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.14);
+        ctx.fillText('$' + Math.floor(state.cashDisplay), cx, H * 0.13);
 
-        // Blocks mined
-        ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${10 * scale}px 'Press Start 2P'`;
-        ctx.fillText('BLOCKS MINED: ' + state.blocksMinedToday, centerX, H * 0.20);
+        // Blocks
+        ctx.font = '400 14px Inter';
+        ctx.fillStyle = COLORS.textSecondary;
+        ctx.fillText('Blocks mined: ' + state.blocksToday, cx, H * 0.18);
 
-        // Sharks
-        let y = H * 0.27;
-        const cardH = 70 * scale;
+        // Shark cards
         const cardW = W * 0.85;
+        const cardH = 80;
+        const startY = H * 0.22;
 
-        state.sharks.forEach((shark, i) => {
-            const cardY = y + i * (cardH + 15 * scale);
+        state.sharks.forEach((s, i) => {
+            const y = startY + i * (cardH + 12);
 
-            // Shark card background
-            ctx.fillStyle = shark.mood === 'angry' ? '#2a1515' :
-                           shark.mood === 'warning' ? '#2a2215' : '#1a1a1a';
-            ctx.fillRect(centerX - cardW/2, cardY, cardW, cardH);
+            // Card bg
+            ctx.fillStyle = s.strikes >= 2 ? '#1a1215' : COLORS.bgCard;
+            ctx.fillRect(cx - cardW/2, y, cardW, cardH);
 
             // Border
-            ctx.strokeStyle = shark.mood === 'angry' ? COLORS.danger :
-                             shark.mood === 'warning' ? COLORS.warning : COLORS.textDim;
-            ctx.lineWidth = 3;
-            ctx.strokeRect(centerX - cardW/2, cardY, cardW, cardH);
+            ctx.strokeStyle = s.strikes >= 2 ? COLORS.danger : s.strikes >= 1 ? COLORS.warning : COLORS.border;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(cx - cardW/2, y, cardW, cardH);
 
             // Name
+            ctx.font = '700 16px Inter';
             ctx.fillStyle = COLORS.text;
-            ctx.font = `${12 * scale}px 'Press Start 2P'`;
             ctx.textAlign = 'left';
-            ctx.fillText(shark.name.toUpperCase(), centerX - cardW/2 + 15 * scale, cardY + 28 * scale);
+            ctx.fillText(s.name, cx - cardW/2 + 15, y + 30);
 
             // Strikes
+            ctx.font = '400 14px Inter';
+            ctx.fillStyle = s.strikes >= 2 ? COLORS.danger : COLORS.textMuted;
             let strikes = '';
-            for (let j = 0; j < 3; j++) {
-                strikes += j < shark.strikes ? '✗ ' : '○ ';
-            }
-            ctx.fillStyle = shark.strikes >= 2 ? COLORS.danger : COLORS.textDim;
-            ctx.font = `${14 * scale}px 'Press Start 2P'`;
-            ctx.fillText(strikes, centerX - cardW/2 + 15 * scale, cardY + 52 * scale);
+            for (let j = 0; j < 3; j++) strikes += j < s.strikes ? '✗ ' : '○ ';
+            ctx.fillText(strikes, cx - cardW/2 + 15, y + 55);
 
             // Demand
+            ctx.font = '700 20px Orbitron';
             ctx.fillStyle = COLORS.success;
-            ctx.font = `${16 * scale}px 'Press Start 2P'`;
-            ctx.textAlign = 'right';
-            ctx.fillText('$' + shark.demand, centerX + cardW/2 - 15 * scale, cardY + 40 * scale);
-        });
+            ctx.textAlign = 'center';
+            ctx.fillText('$' + s.demand, cx, y + 45);
 
-        // Render buttons
-        state.buttons.forEach(renderButton);
+            // Buttons (if not paid)
+            if (!s.paid) {
+                const btnY = y + cardH/2;
+                const canPay = state.cash >= s.demand;
+
+                // Pay
+                ctx.fillStyle = canPay ? COLORS.success : COLORS.textMuted;
+                ctx.fillRect(cx + cardW/2 - 140, btnY - 16, 60, 32);
+                ctx.font = '700 12px Inter';
+                ctx.fillStyle = '#000';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAY', cx + cardW/2 - 110, btnY + 5);
+
+                // Skip
+                ctx.fillStyle = COLORS.danger;
+                ctx.fillRect(cx + cardW/2 - 70, btnY - 16, 55, 32);
+                ctx.fillStyle = '#000';
+                ctx.fillText('SKIP', cx + cardW/2 - 42, btnY + 5);
+            } else {
+                ctx.font = '700 14px Inter';
+                ctx.fillStyle = COLORS.textMuted;
+                ctx.textAlign = 'right';
+                ctx.fillText('DONE', cx + cardW/2 - 15, y + 45);
+            }
+        });
     }
 
     function renderGameOver() {
+        ctx.font = '900 42px Orbitron';
         ctx.fillStyle = COLORS.danger;
-        ctx.font = `${32 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', centerX, H * 0.22);
+        ctx.fillText('GAME OVER', cx, H * 0.25);
 
-        // Stats
+        ctx.font = '400 16px Inter';
+        ctx.fillStyle = COLORS.textSecondary;
+        ctx.fillText(state.gameOverReason || '', cx, H * 0.33);
+
+        ctx.font = '700 20px Inter';
         ctx.fillStyle = COLORS.text;
-        ctx.font = `${14 * scale}px 'Press Start 2P'`;
-        ctx.fillText('DAYS SURVIVED: ' + state.totalDaysSurvived, centerX, H * 0.38);
-        ctx.fillText('BLOCKS MINED: ' + state.totalBlocksMined, centerX, H * 0.46);
-        ctx.fillText('SHARKS FACED: ' + state.sharks.length, centerX, H * 0.54);
+        ctx.fillText('Days survived: ' + state.day, cx, H * 0.45);
+        ctx.fillText('Blocks mined: ' + state.blocksToday, cx, H * 0.52);
 
-        // High score
         ctx.fillStyle = COLORS.purple;
-        ctx.font = `${16 * scale}px 'Press Start 2P'`;
-        ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.65);
-
-        // Render buttons
-        state.buttons.forEach(renderButton);
+        ctx.fillText('Best: ' + state.highScore + ' days', cx, H * 0.62);
     }
 
-    function renderButton(btn) {
-        // Background
-        ctx.fillStyle = btn.color || COLORS.primary;
-        ctx.fillRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
+    function renderButton(b) {
+        // Bg
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.roundRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h, 8);
+        ctx.fill();
 
-        // Border
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
-
-        // Text - size based on button height
-        const fontSize = Math.max(8, Math.min(14, btn.h / 4));
+        // Text
+        ctx.font = '700 14px Inter';
         ctx.fillStyle = '#000';
-        ctx.font = `${fontSize * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(btn.text, btn.x, btn.y);
+        ctx.fillText(b.text, b.x, b.y);
         ctx.textBaseline = 'alphabetic';
     }
 
     // ========================================================================
-    // PIXEL DRAWING HELPERS
+    // LOOP
     // ========================================================================
-    function drawPixelRing(cx, cy, radius, color, thickness) {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = thickness;
-        ctx.beginPath();
+    function loop(time) {
+        const dt = Math.min(0.1, (time - lastTime) / 1000);
+        lastTime = time;
 
-        // Draw as segmented for pixel feel
-        const segments = 32;
-        for (let i = 0; i <= segments; i++) {
-            const a = (i / segments) * Math.PI * 2;
-            const x = Math.floor(cx + Math.cos(a) * radius);
-            const y = Math.floor(cy + Math.sin(a) * radius);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-    }
-
-    function drawPixelArc(cx, cy, radius, startAngle, endAngle, color, thickness) {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = thickness;
-        ctx.beginPath();
-
-        const segments = Math.ceil(((endAngle - startAngle) / (Math.PI * 2)) * 32);
-        for (let i = 0; i <= segments; i++) {
-            const a = startAngle + (i / segments) * (endAngle - startAngle);
-            const x = Math.floor(cx + Math.cos(a) * radius);
-            const y = Math.floor(cy + Math.sin(a) * radius);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-    }
-
-    // ========================================================================
-    // MAIN LOOP
-    // ========================================================================
-    function gameLoop(timestamp) {
-        const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
-        lastTime = timestamp;
-
-        fastUpdate(dt);
+        update(dt);
         render();
 
-        requestAnimationFrame(gameLoop);
+        requestAnimationFrame(loop);
     }
 
     // ========================================================================
     // INIT
     // ========================================================================
-    function init() {
-        // Load high score
-        state.highScore = parseInt(localStorage.getItem('vig_highscore') || '0');
+    state.highScore = parseInt(localStorage.getItem('vig_hs') || '0');
+    resize();
+    window.addEventListener('resize', resize);
 
-        resize();
-        window.addEventListener('resize', resize);
+    // Reset shark paid status each payday
+    const origShowMorning = showMorning;
+    showMorning = function() {
+        state.sharks.forEach(s => s.paid = false);
+        origShowMorning();
+    };
 
-        state.phase = GamePhase.MENU;
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    init();
+    requestAnimationFrame(loop);
 })();
 </script>
 </body>
