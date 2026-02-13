@@ -998,6 +998,18 @@
     resize();
     window.addEventListener('resize', resize);
 
+    // Set up menu buttons on init
+    state.buttons = [{
+        id: 'start',
+        text: 'START',
+        x: cx,
+        y: H * 0.72,
+        w: 180,
+        h: 56,
+        color: COLORS.primary,
+        action: startGame
+    }];
+
     // Reset shark paid status each payday
     const origShowMorning = showMorning;
     showMorning = function() {
