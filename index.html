@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0a0a0f">
-    <title>HASH DEBT</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <title>VIG</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -25,1093 +25,1173 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #0a0a0f;
-            font-family: 'Share Tech Mono', monospace;
+            background: #0a0a0a;
+            font-family: 'Press Start 2P', monospace;
         }
 
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background:
-                radial-gradient(ellipse at 50% 0%, rgba(15, 100, 80, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 100%, rgba(100, 50, 15, 0.1) 0%, transparent 50%),
-                linear-gradient(180deg, #0a0a0f 0%, #0d0d15 50%, #0a0a0f 100%);
-        }
-
-        #gameContainer {
-            position: relative;
+        #game {
             width: 100%;
             height: 100%;
-            max-width: 500px;
-            max-height: 900px;
             display: flex;
-            flex-direction: column;
-        }
-
-        #topBar {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            color: #fff;
-            z-index: 10;
+            justify-content: center;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
-        .stat-box {
-            text-align: center;
-        }
-
-        .stat-label {
-            font-size: 10px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .stat-value {
-            font-family: 'Orbitron', monospace;
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .stat-value.cash {
-            color: #4ade80;
-        }
-
-        .stat-value.btc {
-            color: #f7931a;
-        }
-
-        .stat-value.round {
-            color: #8b5cf6;
-        }
-
-        #gameCanvas {
-            flex: 1;
-            width: 100%;
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
             touch-action: none;
-        }
-
-        #sharkBar {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            padding: 15px;
-            flex-wrap: wrap;
-        }
-
-        .shark-card {
-            background: linear-gradient(145deg, #1a1a25, #12121a);
-            border: 1px solid #2a2a3a;
-            border-radius: 12px;
-            padding: 10px 15px;
-            text-align: center;
-            min-width: 70px;
-            transition: all 0.3s ease;
-        }
-
-        .shark-card.angry {
-            border-color: #ef4444;
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
-        }
-
-        .shark-card.warning {
-            border-color: #f59e0b;
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
-        }
-
-        .shark-card.ok {
-            border-color: #22c55e;
-        }
-
-        .shark-face {
-            font-size: 28px;
-            margin-bottom: 4px;
-        }
-
-        .shark-strikes {
-            font-size: 11px;
-            color: #888;
-        }
-
-        .shark-payment {
-            font-size: 12px;
-            color: #4ade80;
-            font-family: 'Orbitron', monospace;
-            margin-top: 4px;
-        }
-
-        .add-shark {
-            background: linear-gradient(145deg, #1a2a1a, #122012);
-            border: 1px dashed #2a4a2a;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-        }
-
-        .add-shark:hover, .add-shark:active {
-            opacity: 1;
-            border-color: #4ade80;
-        }
-
-        #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(10, 10, 15, 0.95);
-            z-index: 100;
-            padding: 30px;
-            text-align: center;
-        }
-
-        #overlay.hidden {
-            display: none;
-        }
-
-        .overlay-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 32px;
-            font-weight: 900;
-            color: #fff;
-            margin-bottom: 10px;
-            text-shadow: 0 0 30px rgba(247, 147, 26, 0.5);
-        }
-
-        .overlay-subtitle {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 40px;
-            max-width: 280px;
-            line-height: 1.6;
-        }
-
-        .btn {
-            font-family: 'Orbitron', monospace;
-            font-size: 16px;
-            font-weight: 700;
-            padding: 18px 50px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(145deg, #f7931a, #d97706);
-            color: #000;
-            box-shadow: 0 0 30px rgba(247, 147, 26, 0.4);
-        }
-
-        .btn-primary:hover, .btn-primary:active {
-            transform: scale(1.05);
-            box-shadow: 0 0 40px rgba(247, 147, 26, 0.6);
-        }
-
-        .btn-cashout {
-            background: linear-gradient(145deg, #22c55e, #16a34a);
-            color: #000;
-            margin: 10px;
-            padding: 15px 30px;
-        }
-
-        .btn-continue {
-            background: linear-gradient(145deg, #8b5cf6, #7c3aed);
-            color: #fff;
-            margin: 10px;
-            padding: 15px 30px;
-        }
-
-        .multiplier-display {
-            font-family: 'Orbitron', monospace;
-            font-size: 48px;
-            font-weight: 900;
-            color: #f7931a;
-            margin: 20px 0;
-            text-shadow: 0 0 30px rgba(247, 147, 26, 0.6);
-        }
-
-        .session-earnings {
-            font-family: 'Orbitron', monospace;
-            font-size: 24px;
-            color: #4ade80;
-            margin-bottom: 30px;
-        }
-
-        .btn-row {
-            display: flex;
-            gap: 15px;
-        }
-
-        #messageDisplay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Orbitron', monospace;
-            font-size: 24px;
-            font-weight: 900;
-            color: #fff;
-            text-align: center;
-            pointer-events: none;
-            z-index: 50;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        #messageDisplay.show {
-            opacity: 1;
-        }
-
-        .game-over-stats {
-            margin: 20px 0;
-            padding: 20px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-        }
-
-        .game-over-stat {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .game-over-stat:last-child {
-            border-bottom: none;
-        }
-
-        .game-over-label {
-            color: #666;
-        }
-
-        .game-over-value {
-            font-family: 'Orbitron', monospace;
-            color: #fff;
-        }
-
-        .shake {
-            animation: shake 0.4s ease-out;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-10px); }
-            40% { transform: translateX(10px); }
-            60% { transform: translateX(-10px); }
-            80% { transform: translateX(10px); }
-        }
-
-        .payment-modal {
-            background: rgba(20, 20, 30, 0.98);
-            padding: 25px;
-            border-radius: 16px;
-            border: 1px solid #2a2a4a;
-            max-width: 320px;
-            width: 100%;
-        }
-
-        .payment-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 18px;
-            color: #fff;
-            margin-bottom: 20px;
-        }
-
-        .payment-shark {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-
-        .payment-shark-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .payment-shark-face {
-            font-size: 32px;
-        }
-
-        .payment-shark-name {
-            color: #fff;
-            font-size: 14px;
-        }
-
-        .payment-shark-wants {
-            color: #4ade80;
-            font-family: 'Orbitron', monospace;
-            font-size: 16px;
-        }
-
-        .payment-shark-strikes {
-            color: #888;
-            font-size: 11px;
-        }
-
-        .payment-btns {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-pay {
-            background: #22c55e;
-            color: #000;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-family: 'Orbitron', monospace;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .btn-skip {
-            background: #3a3a4a;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-family: 'Orbitron', monospace;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .btn-skip:hover {
-            background: #ef4444;
-        }
-
-        .payment-balance {
-            text-align: center;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #2a2a4a;
-        }
-
-        .payment-balance-label {
-            color: #666;
-            font-size: 12px;
-        }
-
-        .payment-balance-value {
-            font-family: 'Orbitron', monospace;
-            font-size: 24px;
-            color: #4ade80;
-        }
-
-        .continue-btn-wrapper {
-            margin-top: 20px;
-        }
-
-        .round-indicator {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-family: 'Orbitron', monospace;
-            font-size: 14px;
-            color: #8b5cf6;
-            opacity: 0.8;
         }
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="topBar">
-            <div class="stat-box">
-                <div class="stat-label">Cash</div>
-                <div class="stat-value cash" id="cashDisplay">$0.00</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Mining</div>
-                <div class="stat-value btc" id="btcDisplay">0.00000 ₿</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Round</div>
-                <div class="stat-value round" id="roundDisplay">1</div>
-            </div>
-        </div>
-
-        <canvas id="gameCanvas"></canvas>
-
-        <div id="sharkBar">
-            <!-- Sharks will be dynamically added here -->
-        </div>
-
-        <div id="messageDisplay"></div>
-
-        <div id="overlay">
-            <div class="overlay-title">HASH DEBT</div>
-            <div class="overlay-subtitle">
-                You're broke. The mafia gave you a mining rig.
-                Mine crypto, pay your debts, survive as long as you can.
-            </div>
-            <button class="btn btn-primary" id="startBtn">START MINING</button>
-        </div>
+    <div id="game">
+        <canvas id="canvas"></canvas>
     </div>
 
-    <script>
-        // ============================================
-        // GAME STATE
-        // ============================================
-        const GameState = {
-            MENU: 'menu',
-            PLAYING: 'playing',
-            RESULT: 'result',
-            CHOICE: 'choice',
-            PAYMENT: 'payment',
-            GAME_OVER: 'gameOver'
-        };
+<script>
+// ============================================================================
+// VIG - Mine crypto. Pay sharks. Survive.
+// Architecture based on Universal Paperclips + Shattered Pixel Dungeon patterns
+// ============================================================================
 
-        const SHARK_FACES = ['😠', '👊', '🔪', '💀', '👹', '🦈', '😤', '🤬'];
-        const SHARK_NAMES = ['Vinnie', 'Marco', 'Big Tony', 'The Butcher', 'Sal', 'Knuckles', 'Rocco', 'The Fixer'];
+(function() {
+    'use strict';
 
-        let state = GameState.MENU;
-        let canvas, ctx;
-        let animationId;
+    // ========================================================================
+    // CONSTANTS
+    // ========================================================================
+    const COLORS = {
+        bg: '#0a0a0a',
+        bgLight: '#1a1a1a',
+        primary: '#f7931a',      // VIG orange
+        success: '#4ade80',      // Green
+        danger: '#ef4444',       // Red
+        warning: '#f59e0b',      // Yellow
+        purple: '#8b5cf6',
+        text: '#ffffff',
+        textDim: '#666666',
+        textMuted: '#333333'
+    };
 
-        // Player stats
-        let cash = 0;
-        let sessionBTC = 0;
-        let totalStrikes = 0;
-        let round = 1;
-        let highScore = 0;
+    const SHARKS = [
+        { name: 'Vinnie', personality: 'patient', baseDemand: 30, interestMult: 1.1 },
+        { name: 'Marco', personality: 'volatile', baseDemand: 50, interestMult: 1.2 },
+        { name: 'Big Tony', personality: 'heavy', baseDemand: 80, interestMult: 1.15 },
+        { name: 'The Butcher', personality: 'ruthless', baseDemand: 100, interestMult: 1.3 },
+        { name: 'Sal', personality: 'slick', baseDemand: 60, interestMult: 1.25 },
+        { name: 'Knuckles', personality: 'brute', baseDemand: 120, interestMult: 1.35 }
+    ];
+
+    // ========================================================================
+    // GAME STATE
+    // ========================================================================
+    const GamePhase = {
+        MENU: 'menu',
+        MORNING: 'morning',
+        MINING: 'mining',
+        PAYDAY: 'payday',
+        GAMEOVER: 'gameover'
+    };
+
+    const state = {
+        phase: GamePhase.MENU,
+        day: 1,
+
+        // Currency
+        cash: 50,
+        cashDisplay: 50,  // For tweening
+        vig: 0,
+        vigDisplay: 0,
 
         // Mining state
-        let angle = 0;
-        let targetStart = 0;
-        let targetSize = 0.15; // 15% of circle
-        let spinSpeed = 0.03;
-        let isSpinning = false;
-        let multiplier = 1;
-        let sessionEarnings = 0;
+        angle: 0,
+        targetAngle: 0,
+        targetSize: 0.15,
+        spinSpeed: 0.04,
+        isSpinning: false,
+
+        // Block progress
+        hashesFound: 0,
+        hashesNeeded: 5,
+        hashChance: 0.5,  // 50% chance per hit
+        lastHash: '',
+        lastHashValid: false,
+
+        // Strikes
+        strikes: 0,
+        maxStrikes: 3,
+
+        // Session
+        sessionVig: 0,
+        blocksMinedToday: 0,
+
+        // Daily costs
+        electricityCost: 10,
+        rigDecay: 5,
 
         // Loan sharks
-        let sharks = [];
+        sharks: [],
 
-        // Visual effects
-        let particles = [];
-        let screenShake = 0;
-        let flashColor = null;
-        let flashAlpha = 0;
-        let ringPulse = 0;
-        let lastTime = 0;
+        // VIG market
+        vigPrice: 100,  // $100 per VIG
 
-        // Sizing
-        let centerX, centerY, ringRadius;
+        // Stats
+        totalDaysSurvived: 0,
+        totalBlocksMined: 0,
+        highScore: 0,
 
-        // ============================================
-        // INITIALIZATION
-        // ============================================
-        function init() {
-            canvas = document.getElementById('gameCanvas');
-            ctx = canvas.getContext('2d');
+        // UI
+        buttons: [],
+        message: null,
+        messageTimer: 0
+    };
 
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-
-            // Touch/click handlers
-            canvas.addEventListener('touchstart', handleTap, { passive: false });
-            canvas.addEventListener('mousedown', handleTap);
-
-            document.getElementById('startBtn').addEventListener('click', startGame);
-
-            // Load high score
-            highScore = parseInt(localStorage.getItem('hashDebtHighScore') || '0');
-
-            // Start render loop
-            requestAnimationFrame(gameLoop);
+    // ========================================================================
+    // PARTICLE SYSTEM (Shattered Pixel Dungeon pattern)
+    // ========================================================================
+    class Emitter {
+        constructor() {
+            this.particles = [];
+            this.x = 0;
+            this.y = 0;
         }
 
-        function resizeCanvas() {
-            const container = document.getElementById('gameContainer');
-            const topBar = document.getElementById('topBar');
-            const sharkBar = document.getElementById('sharkBar');
-
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight - topBar.offsetHeight - sharkBar.offsetHeight;
-
-            centerX = canvas.width / 2;
-            centerY = canvas.height / 2;
-            ringRadius = Math.min(canvas.width, canvas.height) * 0.35;
-        }
-
-        // ============================================
-        // GAME LOOP
-        // ============================================
-        function gameLoop(timestamp) {
-            const deltaTime = (timestamp - lastTime) / 1000;
-            lastTime = timestamp;
-
-            update(deltaTime);
-            render();
-
-            animationId = requestAnimationFrame(gameLoop);
-        }
-
-        function update(dt) {
-            // Ring pulse animation
-            ringPulse += dt * 2;
-
-            // Update particles
-            particles = particles.filter(p => {
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                p.vy += 200 * dt; // gravity
-                p.life -= dt;
-                return p.life > 0;
-            });
-
-            // Screen shake decay
-            if (screenShake > 0) {
-                screenShake *= 0.9;
-                if (screenShake < 0.5) screenShake = 0;
-            }
-
-            // Flash decay
-            if (flashAlpha > 0) {
-                flashAlpha -= dt * 4;
-                if (flashAlpha < 0) flashAlpha = 0;
-            }
-
-            // Spinning
-            if (state === GameState.PLAYING && isSpinning) {
-                angle += spinSpeed;
-                if (angle > Math.PI * 2) angle -= Math.PI * 2;
-            }
-        }
-
-        function render() {
-            // Clear with background
-            ctx.fillStyle = '#0a0a0f';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Apply screen shake
-            ctx.save();
-            if (screenShake > 0) {
-                ctx.translate(
-                    (Math.random() - 0.5) * screenShake,
-                    (Math.random() - 0.5) * screenShake
-                );
-            }
-
-            // Draw ring glow
-            const glowIntensity = 0.3 + Math.sin(ringPulse) * 0.1;
-            const gradient = ctx.createRadialGradient(
-                centerX, centerY, ringRadius - 30,
-                centerX, centerY, ringRadius + 50
-            );
-            gradient.addColorStop(0, `rgba(74, 222, 128, 0)`);
-            gradient.addColorStop(0.5, `rgba(74, 222, 128, ${glowIntensity * 0.15})`);
-            gradient.addColorStop(1, `rgba(74, 222, 128, 0)`);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw ring
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(74, 222, 128, 0.3)';
-            ctx.lineWidth = 20;
-            ctx.stroke();
-
-            // Draw target zone
-            if (state === GameState.PLAYING || state === GameState.RESULT) {
-                const targetEnd = targetStart + (Math.PI * 2 * targetSize);
-
-                // Target glow
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, ringRadius, targetStart, targetEnd);
-                ctx.strokeStyle = `rgba(247, 147, 26, ${0.5 + Math.sin(ringPulse * 2) * 0.2})`;
-                ctx.lineWidth = 28;
-                ctx.stroke();
-
-                // Target main
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, ringRadius, targetStart, targetEnd);
-                ctx.strokeStyle = '#f7931a';
-                ctx.lineWidth = 20;
-                ctx.stroke();
-            }
-
-            // Draw spinning light
-            if (state === GameState.PLAYING || state === GameState.RESULT) {
-                const lightX = centerX + Math.cos(angle) * ringRadius;
-                const lightY = centerY + Math.sin(angle) * ringRadius;
-
-                // Light trail
-                for (let i = 1; i <= 8; i++) {
-                    const trailAngle = angle - (i * 0.08);
-                    const trailX = centerX + Math.cos(trailAngle) * ringRadius;
-                    const trailY = centerY + Math.sin(trailAngle) * ringRadius;
-                    const alpha = (8 - i) / 8 * 0.5;
-                    const size = 12 - i;
-
-                    ctx.beginPath();
-                    ctx.arc(trailX, trailY, size, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-                    ctx.fill();
-                }
-
-                // Main light
-                const lightGradient = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, 25);
-                lightGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                lightGradient.addColorStop(0.5, 'rgba(200, 255, 200, 0.8)');
-                lightGradient.addColorStop(1, 'rgba(74, 222, 128, 0)');
-
-                ctx.beginPath();
-                ctx.arc(lightX, lightY, 25, 0, Math.PI * 2);
-                ctx.fillStyle = lightGradient;
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.arc(lightX, lightY, 10, 0, Math.PI * 2);
-                ctx.fillStyle = '#fff';
-                ctx.fill();
-            }
-
-            // Draw center info
-            if (state === GameState.PLAYING && isSpinning) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-                ctx.font = '14px "Share Tech Mono"';
-                ctx.textAlign = 'center';
-                ctx.fillText('TAP TO STOP', centerX, centerY + 5);
-            }
-
-            // Draw multiplier in center when active
-            if (multiplier > 1 && (state === GameState.PLAYING || state === GameState.CHOICE)) {
-                ctx.font = 'bold 48px "Orbitron"';
-                ctx.fillStyle = '#f7931a';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${multiplier.toFixed(1)}x`, centerX, centerY - 10);
-
-                ctx.font = '14px "Share Tech Mono"';
-                ctx.fillStyle = 'rgba(247, 147, 26, 0.7)';
-                ctx.fillText('MULTIPLIER', centerX, centerY + 20);
-            }
-
-            // Draw particles
-            particles.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(${p.color}, ${p.life / p.maxLife})`;
-                ctx.fill();
-            });
-
-            // Draw flash overlay
-            if (flashAlpha > 0) {
-                ctx.fillStyle = flashColor.replace(')', `, ${flashAlpha})`).replace('rgb', 'rgba');
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-
-            ctx.restore();
-        }
-
-        // ============================================
-        // GAME LOGIC
-        // ============================================
-        function startGame() {
-            cash = 50; // Starting cash
-            sessionBTC = 0;
-            totalStrikes = 0;
-            round = 1;
-            multiplier = 1;
-            sessionEarnings = 0;
-            sharks = [];
-
-            // Start with one loan shark
-            addShark();
-
-            updateUI();
-            hideOverlay();
-            startRound();
-        }
-
-        function startRound() {
-            state = GameState.PLAYING;
-            isSpinning = true;
-            multiplier = 1;
-            sessionEarnings = 0;
-
-            // Randomize target position
-            targetStart = Math.random() * Math.PI * 2;
-
-            // Increase difficulty over time
-            const difficultyMod = Math.min(round * 0.1, 1.5);
-            spinSpeed = 0.03 + (round * 0.002);
-            targetSize = Math.max(0.08, 0.15 - (round * 0.005));
-
-            updateUI();
-        }
-
-        function handleTap(e) {
-            e.preventDefault();
-
-            if (state === GameState.PLAYING && isSpinning) {
-                isSpinning = false;
-                checkResult();
-            }
-        }
-
-        function checkResult() {
-            const targetEnd = targetStart + (Math.PI * 2 * targetSize);
-
-            // Normalize angles
-            let normalizedAngle = angle % (Math.PI * 2);
-            let normalizedStart = targetStart % (Math.PI * 2);
-            let normalizedEnd = targetEnd % (Math.PI * 2);
-
-            let hit = false;
-            if (normalizedEnd > normalizedStart) {
-                hit = normalizedAngle >= normalizedStart && normalizedAngle <= normalizedEnd;
-            } else {
-                // Target wraps around
-                hit = normalizedAngle >= normalizedStart || normalizedAngle <= normalizedEnd;
-            }
-
-            if (hit) {
-                onHit();
-            } else {
-                onMiss();
-            }
-        }
-
-        function onHit() {
-            state = GameState.RESULT;
-
-            // Calculate earnings (base 0.0001 BTC, affected by multiplier)
-            const btcEarned = 0.0001 * multiplier * (1 + Math.random() * 0.5);
-            sessionBTC += btcEarned;
-            sessionEarnings += btcEarned;
-
-            // Visual feedback
-            flashColor = 'rgb(74, 222, 128)';
-            flashAlpha = 0.3;
-            spawnParticles(centerX + Math.cos(angle) * ringRadius, centerY + Math.sin(angle) * ringRadius, '74, 222, 128', 20);
-            showMessage(`+${btcEarned.toFixed(5)} ₿`, '#4ade80');
-
-            updateUI();
-
-            // Show choice after delay
-            setTimeout(() => {
-                showChoiceOverlay();
-            }, 800);
-        }
-
-        function onMiss() {
-            state = GameState.RESULT;
-            totalStrikes++;
-
-            // Lose session earnings
-            const lost = sessionEarnings;
-            sessionEarnings = 0;
-            sessionBTC = Math.max(0, sessionBTC - lost);
-
-            // Visual feedback
-            flashColor = 'rgb(239, 68, 68)';
-            flashAlpha = 0.4;
-            screenShake = 20;
-            showMessage('MISS!', '#ef4444');
-
-            updateUI();
-
-            if (totalStrikes >= 3) {
-                setTimeout(() => gameOver('Too many misses! The rig crashed.'), 1000);
-            } else {
-                setTimeout(() => {
-                    endRound();
-                }, 1000);
-            }
-        }
-
-        function showChoiceOverlay() {
-            state = GameState.CHOICE;
-
-            const overlay = document.getElementById('overlay');
-            overlay.classList.remove('hidden');
-            overlay.innerHTML = `
-                <div class="multiplier-display">${multiplier.toFixed(1)}x</div>
-                <div class="session-earnings">Session: ${sessionEarnings.toFixed(5)} ₿</div>
-                <div class="btn-row">
-                    <button class="btn btn-cashout" id="cashoutBtn">CASH OUT</button>
-                    <button class="btn btn-continue" id="continueBtn">CONTINUE</button>
-                </div>
-                <div style="margin-top: 20px; color: #666; font-size: 12px;">
-                    Continue: ${(multiplier + 0.5).toFixed(1)}x multiplier, but miss = lose it all
-                </div>
-            `;
-
-            document.getElementById('cashoutBtn').addEventListener('click', () => {
-                hideOverlay();
-                endRound();
-            });
-
-            document.getElementById('continueBtn').addEventListener('click', () => {
-                hideOverlay();
-                continueRound();
-            });
-        }
-
-        function continueRound() {
-            state = GameState.PLAYING;
-            isSpinning = true;
-            multiplier += 0.5;
-
-            // Randomize target position
-            targetStart = Math.random() * Math.PI * 2;
-
-            // Speed up slightly
-            spinSpeed += 0.005;
-        }
-
-        function endRound() {
-            // Convert BTC to cash (simplified rate)
-            const btcPrice = 60000 + Math.random() * 10000; // $60-70k
-            const cashEarned = sessionBTC * btcPrice;
-            cash += cashEarned;
-            sessionBTC = 0;
-
-            showMessage(`+$${cashEarned.toFixed(2)}`, '#4ade80');
-
-            // Go to payment phase
-            setTimeout(() => {
-                showPaymentPhase();
-            }, 1000);
-        }
-
-        function showPaymentPhase() {
-            state = GameState.PAYMENT;
-
-            // Increase shark demands each round
-            sharks.forEach(s => {
-                s.demand = Math.floor(s.baseDemand * (1 + (round - 1) * 0.15));
-            });
-
-            renderPaymentOverlay();
-        }
-
-        function renderPaymentOverlay() {
-            const overlay = document.getElementById('overlay');
-            overlay.classList.remove('hidden');
-
-            let sharksHtml = sharks.map((s, i) => `
-                <div class="payment-shark">
-                    <div class="payment-shark-info">
-                        <div class="payment-shark-face">${s.face}</div>
-                        <div>
-                            <div class="payment-shark-name">${s.name}</div>
-                            <div class="payment-shark-wants">$${s.demand}</div>
-                            <div class="payment-shark-strikes">${s.strikes}/3 strikes</div>
-                        </div>
-                    </div>
-                    <div class="payment-btns">
-                        <button class="btn-pay" data-shark="${i}" ${cash < s.demand ? 'disabled style="opacity:0.5"' : ''}>PAY</button>
-                        <button class="btn-skip" data-shark="${i}">SKIP</button>
-                    </div>
-                </div>
-            `).join('');
-
-            overlay.innerHTML = `
-                <div class="payment-modal">
-                    <div class="payment-title">PAYMENT TIME</div>
-                    ${sharksHtml}
-                    <div class="payment-balance">
-                        <div class="payment-balance-label">Your Cash</div>
-                        <div class="payment-balance-value">$${cash.toFixed(2)}</div>
-                    </div>
-                    <div class="continue-btn-wrapper">
-                        <button class="btn btn-primary" id="nextRoundBtn" style="padding: 12px 30px; font-size: 14px;">
-                            ${sharks.some(s => s.needsAction) ? 'PAY ALL FIRST' : 'NEXT ROUND'}
-                        </button>
-                    </div>
-                    <div style="margin-top: 15px;">
-                        <button class="btn" id="newLoanBtn" style="background: linear-gradient(145deg, #2a2a4a, #1a1a3a); color: #8b5cf6; padding: 10px 20px; font-size: 12px;">
-                            + NEW LOAN (1.5x earnings)
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            // Wire up buttons
-            overlay.querySelectorAll('.btn-pay').forEach(btn => {
-                btn.addEventListener('click', () => payShark(parseInt(btn.dataset.shark)));
-            });
-
-            overlay.querySelectorAll('.btn-skip').forEach(btn => {
-                btn.addEventListener('click', () => skipShark(parseInt(btn.dataset.shark)));
-            });
-
-            document.getElementById('nextRoundBtn').addEventListener('click', () => {
-                if (sharks.every(s => !s.needsAction)) {
-                    hideOverlay();
-                    round++;
-                    startRound();
-                }
-            });
-
-            document.getElementById('newLoanBtn').addEventListener('click', () => {
-                addShark();
-                cash += 100; // Loan gives you cash
-                renderPaymentOverlay();
-                updateSharksUI();
-            });
-        }
-
-        function payShark(index) {
-            const shark = sharks[index];
-            if (cash >= shark.demand) {
-                cash -= shark.demand;
-                shark.needsAction = false;
-                shark.mood = 'ok';
-                renderPaymentOverlay();
-                updateUI();
-            }
-        }
-
-        function skipShark(index) {
-            const shark = sharks[index];
-            shark.strikes++;
-            shark.needsAction = false;
-
-            if (shark.strikes >= 3) {
-                shark.mood = 'angry';
-                renderPaymentOverlay();
-                setTimeout(() => {
-                    gameOver(`${shark.name} lost patience. You're done.`);
-                }, 500);
-                return;
-            }
-
-            shark.mood = shark.strikes >= 2 ? 'angry' : 'warning';
-            renderPaymentOverlay();
-            updateSharksUI();
-        }
-
-        function addShark() {
-            const usedNames = sharks.map(s => s.name);
-            const availableNames = SHARK_NAMES.filter(n => !usedNames.includes(n));
-            const usedFaces = sharks.map(s => s.face);
-            const availableFaces = SHARK_FACES.filter(f => !usedFaces.includes(f));
-
-            sharks.push({
-                name: availableNames[Math.floor(Math.random() * availableNames.length)] || `Shark ${sharks.length + 1}`,
-                face: availableFaces[Math.floor(Math.random() * availableFaces.length)] || '😠',
-                strikes: 0,
-                baseDemand: 30 + sharks.length * 20,
-                demand: 30 + sharks.length * 20,
-                needsAction: false,
-                mood: 'ok'
-            });
-
-            updateSharksUI();
-        }
-
-        function gameOver(reason) {
-            state = GameState.GAME_OVER;
-
-            // Check high score
-            const finalScore = round;
-            if (finalScore > highScore) {
-                highScore = finalScore;
-                localStorage.setItem('hashDebtHighScore', highScore.toString());
-            }
-
-            const overlay = document.getElementById('overlay');
-            overlay.classList.remove('hidden');
-            overlay.innerHTML = `
-                <div class="overlay-title" style="color: #ef4444;">GAME OVER</div>
-                <div class="overlay-subtitle">${reason}</div>
-                <div class="game-over-stats">
-                    <div class="game-over-stat">
-                        <span class="game-over-label">Rounds Survived</span>
-                        <span class="game-over-value">${round}</span>
-                    </div>
-                    <div class="game-over-stat">
-                        <span class="game-over-label">Peak Cash</span>
-                        <span class="game-over-value">$${cash.toFixed(2)}</span>
-                    </div>
-                    <div class="game-over-stat">
-                        <span class="game-over-label">Sharks Juggled</span>
-                        <span class="game-over-value">${sharks.length}</span>
-                    </div>
-                    <div class="game-over-stat">
-                        <span class="game-over-label">High Score</span>
-                        <span class="game-over-value">${highScore} rounds</span>
-                    </div>
-                </div>
-                <button class="btn btn-primary" id="restartBtn">TRY AGAIN</button>
-            `;
-
-            document.getElementById('restartBtn').addEventListener('click', startGame);
-        }
-
-        // ============================================
-        // UI HELPERS
-        // ============================================
-        function updateUI() {
-            document.getElementById('cashDisplay').textContent = `$${cash.toFixed(2)}`;
-            document.getElementById('btcDisplay').textContent = `${sessionBTC.toFixed(5)} ₿`;
-            document.getElementById('roundDisplay').textContent = round;
-            updateSharksUI();
-        }
-
-        function updateSharksUI() {
-            const bar = document.getElementById('sharkBar');
-            bar.innerHTML = sharks.map(s => `
-                <div class="shark-card ${s.mood}">
-                    <div class="shark-face">${s.face}</div>
-                    <div class="shark-strikes">${s.strikes}/3</div>
-                    <div class="shark-payment">$${s.demand}</div>
-                </div>
-            `).join('');
-        }
-
-        function showMessage(text, color) {
-            const msg = document.getElementById('messageDisplay');
-            msg.textContent = text;
-            msg.style.color = color;
-            msg.classList.add('show');
-
-            setTimeout(() => {
-                msg.classList.remove('show');
-            }, 800);
-        }
-
-        function hideOverlay() {
-            document.getElementById('overlay').classList.add('hidden');
-        }
-
-        function spawnParticles(x, y, color, count) {
+        burst(x, y, color, count, speed = 100) {
             for (let i = 0; i < count; i++) {
-                particles.push({
+                const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+                const vel = speed * (0.5 + Math.random() * 0.5);
+                this.particles.push({
                     x: x,
                     y: y,
-                    vx: (Math.random() - 0.5) * 400,
-                    vy: (Math.random() - 0.5) * 400 - 100,
-                    size: 3 + Math.random() * 5,
+                    vx: Math.cos(angle) * vel,
+                    vy: Math.sin(angle) * vel,
+                    size: 3 + Math.random() * 4,
                     color: color,
-                    life: 0.5 + Math.random() * 0.5,
-                    maxLife: 1
+                    life: 0.5 + Math.random() * 0.3,
+                    maxLife: 0.8,
+                    gravity: 150
                 });
             }
         }
 
-        // ============================================
-        // START
-        // ============================================
-        window.addEventListener('load', init);
-    </script>
+        sparkUp(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                this.particles.push({
+                    x: x + (Math.random() - 0.5) * 20,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 50,
+                    vy: -100 - Math.random() * 100,
+                    size: 2 + Math.random() * 3,
+                    color: color,
+                    life: 0.4 + Math.random() * 0.4,
+                    maxLife: 0.8,
+                    gravity: 50
+                });
+            }
+        }
+
+        update(dt) {
+            this.particles = this.particles.filter(p => {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += p.gravity * dt;
+                p.life -= dt;
+                return p.life > 0;
+            });
+        }
+
+        render(ctx) {
+            this.particles.forEach(p => {
+                const alpha = p.life / p.maxLife;
+                const size = p.size * alpha;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = alpha;
+                // Pixel-style square particles
+                ctx.fillRect(
+                    Math.floor(p.x - size/2),
+                    Math.floor(p.y - size/2),
+                    Math.ceil(size),
+                    Math.ceil(size)
+                );
+            });
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // ========================================================================
+    // NUMBER TWEENING (Satisfying counter rolls)
+    // ========================================================================
+    class Tweener {
+        static lerp(current, target, speed, dt) {
+            const diff = target - current;
+            if (Math.abs(diff) < 0.01) return target;
+            return current + diff * Math.min(1, speed * dt);
+        }
+    }
+
+    // ========================================================================
+    // CAMERA / SCREEN SHAKE (SPD pattern)
+    // ========================================================================
+    const camera = {
+        shakeX: 0,
+        shakeY: 0,
+        shakeMag: 0,
+        shakeTime: 0,
+        shakeDuration: 0,
+
+        shake(magnitude, duration) {
+            this.shakeMag = magnitude;
+            this.shakeTime = duration;
+            this.shakeDuration = duration;
+        },
+
+        update(dt) {
+            if (this.shakeTime > 0) {
+                const damping = this.shakeTime / this.shakeDuration;
+                this.shakeX = (Math.random() - 0.5) * this.shakeMag * damping * 2;
+                this.shakeY = (Math.random() - 0.5) * this.shakeMag * damping * 2;
+                this.shakeTime -= dt;
+            } else {
+                this.shakeX = 0;
+                this.shakeY = 0;
+            }
+        }
+    };
+
+    // ========================================================================
+    // CANVAS SETUP
+    // ========================================================================
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, scale, centerX, centerY, ringRadius;
+    const emitter = new Emitter();
+
+    function resize() {
+        const container = document.getElementById('game');
+        const maxW = container.clientWidth;
+        const maxH = container.clientHeight;
+
+        // Target 9:16 aspect ratio for mobile
+        const targetRatio = 9 / 16;
+        let w = maxW;
+        let h = maxH;
+
+        if (w / h > targetRatio) {
+            w = h * targetRatio;
+        } else {
+            h = w / targetRatio;
+        }
+
+        // Use integer scaling for pixel-perfect rendering
+        scale = Math.max(1, Math.floor(Math.min(w / 360, h / 640)));
+        W = Math.floor(360 * scale);
+        H = Math.floor(640 * scale);
+
+        canvas.width = W;
+        canvas.height = H;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+
+        centerX = W / 2;
+        centerY = H * 0.4;
+        ringRadius = Math.min(W, H) * 0.28;
+
+        // Disable anti-aliasing for pixel art
+        ctx.imageSmoothingEnabled = false;
+    }
+
+    // ========================================================================
+    // HASH GENERATION (Visual flavor)
+    // ========================================================================
+    function generateHash() {
+        const chars = '0123456789ABCDEF';
+        let hash = '';
+        for (let i = 0; i < 8; i++) {
+            hash += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return hash;
+    }
+
+    function checkHashValid(day) {
+        // Probability decreases with day
+        const baseChance = state.hashChance - (day - 1) * 0.03;
+        const chance = Math.max(0.15, baseChance);
+        return Math.random() < chance;
+    }
+
+    // ========================================================================
+    // SHARK MANAGEMENT
+    // ========================================================================
+    function addShark() {
+        const available = SHARKS.filter(s =>
+            !state.sharks.find(existing => existing.name === s.name)
+        );
+        if (available.length === 0) return null;
+
+        const template = available[Math.floor(Math.random() * available.length)];
+        const shark = {
+            ...template,
+            strikes: 0,
+            demand: template.baseDemand,
+            mood: 'neutral',  // neutral, warning, angry
+            loanAmount: 100 + state.sharks.length * 50
+        };
+        state.sharks.push(shark);
+        return shark;
+    }
+
+    function updateSharkDemands() {
+        state.sharks.forEach(s => {
+            s.demand = Math.floor(s.baseDemand * Math.pow(s.interestMult, state.day - 1));
+        });
+    }
+
+    // ========================================================================
+    // GAME LOGIC
+    // ========================================================================
+    function startGame() {
+        state.phase = GamePhase.MORNING;
+        state.day = 1;
+        state.cash = 50;
+        state.cashDisplay = 50;
+        state.vig = 0;
+        state.vigDisplay = 0;
+        state.strikes = 0;
+        state.sharks = [];
+        state.sessionVig = 0;
+        state.blocksMinedToday = 0;
+        state.totalDaysSurvived = 0;
+        state.totalBlocksMined = 0;
+        state.vigPrice = 100;
+        state.hashesFound = 0;
+        state.hashesNeeded = 5;
+        state.hashChance = 0.5;
+        state.electricityCost = 10;
+        state.rigDecay = 5;
+
+        // Start with one shark
+        addShark();
+
+        showMorning();
+    }
+
+    function showMorning() {
+        state.phase = GamePhase.MORNING;
+        state.strikes = 0;
+        state.sessionVig = 0;
+        state.blocksMinedToday = 0;
+
+        // Update difficulty
+        state.hashesNeeded = Math.min(12, 5 + Math.floor((state.day - 1) / 2));
+        state.hashChance = Math.max(0.2, 0.5 - (state.day - 1) * 0.025);
+        state.spinSpeed = 0.04 + (state.day - 1) * 0.003;
+        state.targetSize = Math.max(0.08, 0.15 - (state.day - 1) * 0.005);
+
+        // Update costs
+        state.electricityCost = 10 + (state.day - 1) * 3;
+        state.rigDecay = 5 + (state.day - 1) * 2;
+
+        // Update shark demands
+        updateSharkDemands();
+
+        // Update VIG price (random walk with slight downward bias)
+        const priceChange = (Math.random() - 0.55) * 20;
+        state.vigPrice = Math.max(30, state.vigPrice + priceChange);
+
+        // Calculate total owed
+        const totalOwed = state.sharks.reduce((sum, s) => sum + s.demand, 0);
+
+        state.buttons = [
+            {
+                id: 'start_mining',
+                text: 'START MINING',
+                x: centerX,
+                y: H * 0.75,
+                w: 200 * scale / 2,
+                h: 40 * scale / 2,
+                color: COLORS.primary,
+                action: startMining
+            }
+        ];
+    }
+
+    function startMining() {
+        state.phase = GamePhase.MINING;
+        state.isSpinning = true;
+        state.angle = Math.random() * Math.PI * 2;
+        state.targetAngle = Math.random() * Math.PI * 2;
+        state.hashesFound = 0;
+        state.lastHash = '';
+        state.buttons = [];
+    }
+
+    function handleTap() {
+        if (state.phase !== GamePhase.MINING || !state.isSpinning) return;
+
+        state.isSpinning = false;
+
+        // Check if in target zone
+        const targetStart = state.targetAngle;
+        const targetEnd = targetStart + (Math.PI * 2 * state.targetSize);
+
+        let angle = state.angle % (Math.PI * 2);
+        if (angle < 0) angle += Math.PI * 2;
+
+        let inZone = false;
+        if (targetEnd > Math.PI * 2) {
+            // Zone wraps around
+            inZone = angle >= targetStart || angle <= (targetEnd % (Math.PI * 2));
+        } else {
+            inZone = angle >= targetStart && angle <= targetEnd;
+        }
+
+        if (inZone) {
+            onHit();
+        } else {
+            onMiss();
+        }
+    }
+
+    function onHit() {
+        // Generate hash and check if valid
+        state.lastHash = generateHash();
+        state.lastHashValid = checkHashValid(state.day);
+
+        const hitX = centerX + Math.cos(state.angle) * ringRadius;
+        const hitY = centerY + Math.sin(state.angle) * ringRadius;
+
+        if (state.lastHashValid) {
+            // Valid hash!
+            state.hashesFound++;
+            emitter.burst(hitX, hitY, COLORS.success, 15, 80);
+            emitter.sparkUp(hitX, hitY, COLORS.primary, 8);
+            showMessage('+1 HASH', COLORS.success);
+
+            if (state.hashesFound >= state.hashesNeeded) {
+                // Block cracked!
+                crackBlock();
+                return;
+            }
+        } else {
+            // Invalid hash, but not a miss
+            emitter.burst(hitX, hitY, COLORS.textDim, 8, 40);
+            showMessage('INVALID', COLORS.textDim);
+        }
+
+        // Continue mining
+        setTimeout(() => {
+            if (state.phase === GamePhase.MINING) {
+                state.isSpinning = true;
+                state.targetAngle = Math.random() * Math.PI * 2;
+            }
+        }, 300);
+    }
+
+    function onMiss() {
+        state.strikes++;
+        camera.shake(15, 0.4);
+        emitter.burst(centerX, centerY, COLORS.danger, 20, 120);
+        showMessage('MISS!', COLORS.danger);
+
+        if (state.strikes >= state.maxStrikes) {
+            // Rig crashed, end day early
+            setTimeout(() => endDay(true), 800);
+        } else {
+            setTimeout(() => {
+                if (state.phase === GamePhase.MINING) {
+                    state.isSpinning = true;
+                    state.targetAngle = Math.random() * Math.PI * 2;
+                }
+            }, 500);
+        }
+    }
+
+    function crackBlock() {
+        // Block cracked!
+        state.blocksMinedToday++;
+        state.totalBlocksMined++;
+
+        const vigEarned = 0.1 + Math.random() * 0.05;
+        state.vig += vigEarned;
+        state.sessionVig += vigEarned;
+
+        camera.shake(8, 0.3);
+        emitter.burst(centerX, centerY, COLORS.primary, 25, 150);
+        emitter.sparkUp(centerX, centerY - 50, COLORS.success, 15);
+        showMessage('BLOCK CRACKED!', COLORS.primary);
+
+        // Show choice: continue or cash out
+        setTimeout(() => {
+            if (state.phase === GamePhase.MINING) {
+                showMiningChoice();
+            }
+        }, 600);
+    }
+
+    function showMiningChoice() {
+        state.isSpinning = false;
+        state.buttons = [
+            {
+                id: 'cash_out',
+                text: 'END DAY',
+                x: centerX - 70 * scale / 2,
+                y: H * 0.65,
+                w: 120 * scale / 2,
+                h: 35 * scale / 2,
+                color: COLORS.success,
+                action: () => endDay(false)
+            },
+            {
+                id: 'continue',
+                text: 'KEEP MINING',
+                x: centerX + 70 * scale / 2,
+                y: H * 0.65,
+                w: 120 * scale / 2,
+                h: 35 * scale / 2,
+                color: COLORS.purple,
+                action: continueMining
+            }
+        ];
+    }
+
+    function continueMining() {
+        state.buttons = [];
+        state.hashesFound = 0;
+        state.isSpinning = true;
+        state.targetAngle = Math.random() * Math.PI * 2;
+    }
+
+    function endDay(crashed) {
+        state.phase = GamePhase.PAYDAY;
+        state.isSpinning = false;
+        state.buttons = [];
+
+        // Convert VIG to cash
+        const cashEarned = state.sessionVig * state.vigPrice;
+        state.cash += cashEarned;
+        state.vig = 0;
+        state.sessionVig = 0;
+
+        // Deduct daily costs
+        state.cash -= state.electricityCost;
+        state.cash -= state.rigDecay;
+
+        if (crashed) {
+            showMessage('RIG CRASHED!', COLORS.danger);
+        }
+
+        setTimeout(() => showPayday(), crashed ? 1000 : 500);
+    }
+
+    function showPayday() {
+        state.buttons = [];
+        renderPayday();
+    }
+
+    function payShark(index) {
+        const shark = state.sharks[index];
+        if (state.cash >= shark.demand) {
+            state.cash -= shark.demand;
+            shark.mood = 'neutral';
+            emitter.sparkUp(centerX, H * 0.5, COLORS.success, 10);
+        }
+        renderPayday();
+    }
+
+    function skipShark(index) {
+        const shark = state.sharks[index];
+        shark.strikes++;
+
+        if (shark.strikes >= 3) {
+            shark.mood = 'angry';
+            gameOver(shark.name + ' COLLECTED');
+            return;
+        }
+
+        shark.mood = shark.strikes >= 2 ? 'angry' : 'warning';
+        camera.shake(5, 0.2);
+        renderPayday();
+    }
+
+    function takeLoan() {
+        const shark = addShark();
+        if (shark) {
+            state.cash += shark.loanAmount;
+            emitter.sparkUp(centerX, H * 0.5, COLORS.primary, 15);
+            showMessage('+$' + shark.loanAmount, COLORS.success);
+        }
+        renderPayday();
+    }
+
+    function nextDay() {
+        state.day++;
+        state.totalDaysSurvived++;
+        showMorning();
+    }
+
+    function renderPayday() {
+        // Build buttons for payday screen
+        state.buttons = [];
+
+        let y = H * 0.35;
+        const btnH = 28 * scale / 2;
+        const spacing = 8 * scale / 2;
+
+        state.sharks.forEach((shark, i) => {
+            const canPay = state.cash >= shark.demand;
+            const paid = shark.mood === 'paid';
+
+            if (!paid) {
+                state.buttons.push({
+                    id: 'pay_' + i,
+                    text: 'PAY $' + shark.demand,
+                    x: centerX - 50 * scale / 2,
+                    y: y + i * (btnH + spacing + 30 * scale / 2),
+                    w: 80 * scale / 2,
+                    h: btnH,
+                    color: canPay ? COLORS.success : COLORS.textDim,
+                    action: canPay ? () => payShark(i) : null
+                });
+
+                state.buttons.push({
+                    id: 'skip_' + i,
+                    text: 'SKIP',
+                    x: centerX + 50 * scale / 2,
+                    y: y + i * (btnH + spacing + 30 * scale / 2),
+                    w: 60 * scale / 2,
+                    h: btnH,
+                    color: COLORS.danger,
+                    action: () => skipShark(i)
+                });
+            }
+        });
+
+        // New loan button
+        const hasAvailableSharks = state.sharks.length < SHARKS.length;
+        if (hasAvailableSharks) {
+            state.buttons.push({
+                id: 'new_loan',
+                text: '+ NEW LOAN',
+                x: centerX,
+                y: H * 0.78,
+                w: 140 * scale / 2,
+                h: 32 * scale / 2,
+                color: COLORS.warning,
+                action: takeLoan
+            });
+        }
+
+        // Next day button (only if all sharks handled or can proceed)
+        state.buttons.push({
+            id: 'next_day',
+            text: 'NEXT DAY',
+            x: centerX,
+            y: H * 0.88,
+            w: 140 * scale / 2,
+            h: 36 * scale / 2,
+            color: COLORS.primary,
+            action: nextDay
+        });
+    }
+
+    function gameOver(reason) {
+        state.phase = GamePhase.GAMEOVER;
+        state.buttons = [];
+
+        // Update high score
+        if (state.totalDaysSurvived > state.highScore) {
+            state.highScore = state.totalDaysSurvived;
+            localStorage.setItem('vig_highscore', state.highScore);
+        }
+
+        camera.shake(20, 0.5);
+
+        setTimeout(() => {
+            state.buttons = [{
+                id: 'restart',
+                text: 'TRY AGAIN',
+                x: centerX,
+                y: H * 0.75,
+                w: 160 * scale / 2,
+                h: 40 * scale / 2,
+                color: COLORS.primary,
+                action: startGame
+            }];
+        }, 1500);
+    }
+
+    function showMessage(text, color) {
+        state.message = { text, color };
+        state.messageTimer = 1.0;
+    }
+
+    // ========================================================================
+    // INPUT HANDLING
+    // ========================================================================
+    function handleInput(x, y) {
+        // Check buttons first
+        for (const btn of state.buttons) {
+            if (btn.action &&
+                x >= btn.x - btn.w/2 && x <= btn.x + btn.w/2 &&
+                y >= btn.y - btn.h/2 && y <= btn.y + btn.h/2) {
+                btn.action();
+                return;
+            }
+        }
+
+        // Otherwise handle tap
+        if (state.phase === GamePhase.MINING) {
+            handleTap();
+        }
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+        handleInput(x, y);
+    }, { passive: false });
+
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        handleInput(x, y);
+    });
+
+    // ========================================================================
+    // GAME LOOPS (Universal Paperclips pattern: separate update speeds)
+    // ========================================================================
+    let lastTime = 0;
+
+    // Fast loop: Mining physics, particles (60fps)
+    function fastUpdate(dt) {
+        // Spin
+        if (state.isSpinning) {
+            state.angle += state.spinSpeed;
+            if (state.angle > Math.PI * 2) state.angle -= Math.PI * 2;
+        }
+
+        // Particles
+        emitter.update(dt);
+
+        // Camera
+        camera.update(dt);
+
+        // Number tweening
+        state.cashDisplay = Tweener.lerp(state.cashDisplay, state.cash, 8, dt);
+        state.vigDisplay = Tweener.lerp(state.vigDisplay, state.vig, 8, dt);
+
+        // Message timer
+        if (state.messageTimer > 0) {
+            state.messageTimer -= dt;
+        }
+    }
+
+    // Render loop
+    function render() {
+        ctx.save();
+        ctx.translate(Math.floor(camera.shakeX), Math.floor(camera.shakeY));
+
+        // Clear
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(-10, -10, W + 20, H + 20);
+
+        switch (state.phase) {
+            case GamePhase.MENU:
+                renderMenu();
+                break;
+            case GamePhase.MORNING:
+                renderMorning();
+                break;
+            case GamePhase.MINING:
+                renderMining();
+                break;
+            case GamePhase.PAYDAY:
+                renderPaydayScreen();
+                break;
+            case GamePhase.GAMEOVER:
+                renderGameOver();
+                break;
+        }
+
+        // Render particles on top
+        emitter.render(ctx);
+
+        // Render message
+        if (state.messageTimer > 0 && state.message) {
+            const alpha = Math.min(1, state.messageTimer * 2);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = state.message.color;
+            ctx.font = `${14 * scale / 2}px 'Press Start 2P'`;
+            ctx.textAlign = 'center';
+            ctx.fillText(state.message.text, centerX, centerY - ringRadius - 40 * scale / 2);
+            ctx.globalAlpha = 1;
+        }
+
+        ctx.restore();
+    }
+
+    function renderMenu() {
+        // Title
+        ctx.fillStyle = COLORS.primary;
+        ctx.font = `${32 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText('VIG', centerX, H * 0.3);
+
+        // Subtitle
+        ctx.fillStyle = COLORS.textDim;
+        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('MINE CRYPTO. PAY SHARKS.', centerX, H * 0.38);
+        ctx.fillText('SURVIVE.', centerX, H * 0.42);
+
+        // High score
+        if (state.highScore > 0) {
+            ctx.fillStyle = COLORS.purple;
+            ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.5);
+        }
+
+        // Start button
+        renderButton({
+            text: 'START',
+            x: centerX,
+            y: H * 0.65,
+            w: 140 * scale / 2,
+            h: 40 * scale / 2,
+            color: COLORS.primary
+        });
+
+        state.buttons = [{
+            id: 'start',
+            text: 'START',
+            x: centerX,
+            y: H * 0.65,
+            w: 140 * scale / 2,
+            h: 40 * scale / 2,
+            color: COLORS.primary,
+            action: startGame
+        }];
+    }
+
+    function renderMorning() {
+        // Header
+        ctx.fillStyle = COLORS.text;
+        ctx.font = `${12 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText('DAY ' + state.day, centerX, H * 0.1);
+
+        // Cash
+        ctx.fillStyle = COLORS.success;
+        ctx.font = `${16 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.18);
+
+        // Daily costs
+        ctx.fillStyle = COLORS.textDim;
+        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        let y = H * 0.28;
+        ctx.fillText('DAILY COSTS:', centerX, y);
+
+        ctx.fillStyle = COLORS.danger;
+        y += 20 * scale / 2;
+        ctx.fillText('ELECTRICITY: -$' + state.electricityCost, centerX, y);
+        y += 15 * scale / 2;
+        ctx.fillText('RIG DECAY: -$' + state.rigDecay, centerX, y);
+
+        // Shark payments due
+        y += 30 * scale / 2;
+        ctx.fillStyle = COLORS.textDim;
+        ctx.fillText('SHARKS WANT:', centerX, y);
+
+        const totalOwed = state.sharks.reduce((sum, s) => sum + s.demand, 0);
+        y += 18 * scale / 2;
+        ctx.fillStyle = COLORS.warning;
+        ctx.font = `${12 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('$' + totalOwed, centerX, y);
+
+        // Mining info
+        y += 40 * scale / 2;
+        ctx.fillStyle = COLORS.textDim;
+        ctx.font = `${7 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('HASH CHANCE: ' + Math.floor(state.hashChance * 100) + '%', centerX, y);
+        y += 14 * scale / 2;
+        ctx.fillText('HASHES/BLOCK: ' + state.hashesNeeded, centerX, y);
+        y += 14 * scale / 2;
+        ctx.fillText('VIG PRICE: $' + Math.floor(state.vigPrice), centerX, y);
+
+        // Render buttons
+        state.buttons.forEach(renderButton);
+    }
+
+    function renderMining() {
+        // Header
+        ctx.fillStyle = COLORS.text;
+        ctx.font = `${10 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText('DAY ' + state.day, centerX, 25 * scale / 2);
+
+        // Cash
+        ctx.fillStyle = COLORS.success;
+        ctx.font = `${12 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX - 80 * scale / 2, 25 * scale / 2);
+
+        // VIG
+        ctx.fillStyle = COLORS.primary;
+        ctx.fillText(state.vigDisplay.toFixed(2) + ' VIG', centerX + 80 * scale / 2, 25 * scale / 2);
+
+        // Strikes
+        ctx.fillStyle = COLORS.textDim;
+        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        let strikeText = '';
+        for (let i = 0; i < state.maxStrikes; i++) {
+            strikeText += i < state.strikes ? '✗ ' : '○ ';
+        }
+        ctx.fillText(strikeText, centerX, 45 * scale / 2);
+
+        // Draw pixel ring
+        drawPixelRing(centerX, centerY, ringRadius, COLORS.bgLight, 8);
+
+        // Draw target zone
+        drawPixelArc(
+            centerX, centerY, ringRadius,
+            state.targetAngle,
+            state.targetAngle + Math.PI * 2 * state.targetSize,
+            COLORS.primary, 10
+        );
+
+        // Draw spinner
+        if (state.phase === GamePhase.MINING) {
+            const spinX = centerX + Math.cos(state.angle) * ringRadius;
+            const spinY = centerY + Math.sin(state.angle) * ringRadius;
+
+            // Trail
+            for (let i = 1; i <= 5; i++) {
+                const trailAngle = state.angle - i * 0.1;
+                const tx = centerX + Math.cos(trailAngle) * ringRadius;
+                const ty = centerY + Math.sin(trailAngle) * ringRadius;
+                const size = (12 - i * 2) * scale / 2;
+                ctx.fillStyle = COLORS.text;
+                ctx.globalAlpha = (5 - i) / 5 * 0.5;
+                ctx.fillRect(
+                    Math.floor(tx - size/2),
+                    Math.floor(ty - size/2),
+                    Math.ceil(size),
+                    Math.ceil(size)
+                );
+            }
+            ctx.globalAlpha = 1;
+
+            // Main dot
+            const dotSize = 14 * scale / 2;
+            ctx.fillStyle = COLORS.text;
+            ctx.fillRect(
+                Math.floor(spinX - dotSize/2),
+                Math.floor(spinY - dotSize/2),
+                Math.ceil(dotSize),
+                Math.ceil(dotSize)
+            );
+        }
+
+        // Hash progress
+        const progressY = centerY + ringRadius + 40 * scale / 2;
+        ctx.fillStyle = COLORS.textDim;
+        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText('HASHES: ' + state.hashesFound + '/' + state.hashesNeeded, centerX, progressY);
+
+        // Progress bar
+        const barW = 150 * scale / 2;
+        const barH = 10 * scale / 2;
+        const barX = centerX - barW / 2;
+        const barY = progressY + 10 * scale / 2;
+
+        ctx.fillStyle = COLORS.bgLight;
+        ctx.fillRect(barX, barY, barW, barH);
+
+        const progress = state.hashesFound / state.hashesNeeded;
+        ctx.fillStyle = COLORS.primary;
+        ctx.fillRect(barX, barY, barW * progress, barH);
+
+        // Last hash
+        if (state.lastHash) {
+            ctx.fillStyle = state.lastHashValid ? COLORS.success : COLORS.textDim;
+            ctx.font = `${7 * scale / 2}px 'Press Start 2P'`;
+            ctx.fillText(state.lastHash + (state.lastHashValid ? ' ✓' : ' ✗'), centerX, barY + 30 * scale / 2);
+        }
+
+        // Tap prompt
+        if (state.isSpinning) {
+            ctx.fillStyle = COLORS.textMuted;
+            ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+            ctx.fillText('TAP TO HASH', centerX, H * 0.85);
+        }
+
+        // Render buttons (for choice screen)
+        state.buttons.forEach(renderButton);
+    }
+
+    function renderPaydayScreen() {
+        // Header
+        ctx.fillStyle = COLORS.warning;
+        ctx.font = `${14 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText('PAYDAY', centerX, H * 0.08);
+
+        // Cash
+        ctx.fillStyle = COLORS.success;
+        ctx.font = `${18 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.16);
+
+        // Blocks mined
+        ctx.fillStyle = COLORS.textDim;
+        ctx.font = `${7 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('BLOCKS MINED TODAY: ' + state.blocksMinedToday, centerX, H * 0.22);
+
+        // Sharks
+        let y = H * 0.30;
+        state.sharks.forEach((shark, i) => {
+            const cardY = y + i * (60 * scale / 2);
+
+            // Shark card background
+            ctx.fillStyle = shark.mood === 'angry' ? '#2a1515' :
+                           shark.mood === 'warning' ? '#2a2215' : '#1a1a1a';
+            ctx.fillRect(centerX - 120 * scale / 2, cardY - 15 * scale / 2, 240 * scale / 2, 50 * scale / 2);
+
+            // Border
+            ctx.strokeStyle = shark.mood === 'angry' ? COLORS.danger :
+                             shark.mood === 'warning' ? COLORS.warning : COLORS.textDim;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(centerX - 120 * scale / 2, cardY - 15 * scale / 2, 240 * scale / 2, 50 * scale / 2);
+
+            // Name
+            ctx.fillStyle = COLORS.text;
+            ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+            ctx.textAlign = 'left';
+            ctx.fillText(shark.name.toUpperCase(), centerX - 110 * scale / 2, cardY + 2 * scale / 2);
+
+            // Strikes
+            let strikes = '';
+            for (let j = 0; j < 3; j++) {
+                strikes += j < shark.strikes ? '✗' : '○';
+            }
+            ctx.fillStyle = shark.strikes >= 2 ? COLORS.danger : COLORS.textDim;
+            ctx.fillText(strikes, centerX - 110 * scale / 2, cardY + 18 * scale / 2);
+
+            // Demand
+            ctx.fillStyle = COLORS.success;
+            ctx.textAlign = 'right';
+            ctx.fillText('$' + shark.demand, centerX + 110 * scale / 2, cardY + 2 * scale / 2);
+        });
+
+        // Render buttons
+        state.buttons.forEach(renderButton);
+    }
+
+    function renderGameOver() {
+        ctx.fillStyle = COLORS.danger;
+        ctx.font = `${20 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', centerX, H * 0.25);
+
+        // Stats
+        ctx.fillStyle = COLORS.text;
+        ctx.font = `${10 * scale / 2}px 'Press Start 2P'`;
+        ctx.fillText('DAYS SURVIVED: ' + state.totalDaysSurvived, centerX, H * 0.4);
+        ctx.fillText('BLOCKS MINED: ' + state.totalBlocksMined, centerX, H * 0.48);
+        ctx.fillText('SHARKS FACED: ' + state.sharks.length, centerX, H * 0.56);
+
+        // High score
+        ctx.fillStyle = COLORS.purple;
+        ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.66);
+
+        // Render buttons
+        state.buttons.forEach(renderButton);
+    }
+
+    function renderButton(btn) {
+        // Background
+        ctx.fillStyle = btn.color || COLORS.primary;
+        ctx.fillRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
+
+        // Text
+        ctx.fillStyle = COLORS.bg;
+        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(btn.text, btn.x, btn.y);
+        ctx.textBaseline = 'alphabetic';
+    }
+
+    // ========================================================================
+    // PIXEL DRAWING HELPERS
+    // ========================================================================
+    function drawPixelRing(cx, cy, radius, color, thickness) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+
+        // Draw as segmented for pixel feel
+        const segments = 32;
+        for (let i = 0; i <= segments; i++) {
+            const a = (i / segments) * Math.PI * 2;
+            const x = Math.floor(cx + Math.cos(a) * radius);
+            const y = Math.floor(cy + Math.sin(a) * radius);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+
+    function drawPixelArc(cx, cy, radius, startAngle, endAngle, color, thickness) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+
+        const segments = Math.ceil(((endAngle - startAngle) / (Math.PI * 2)) * 32);
+        for (let i = 0; i <= segments; i++) {
+            const a = startAngle + (i / segments) * (endAngle - startAngle);
+            const x = Math.floor(cx + Math.cos(a) * radius);
+            const y = Math.floor(cy + Math.sin(a) * radius);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+
+    // ========================================================================
+    // MAIN LOOP
+    // ========================================================================
+    function gameLoop(timestamp) {
+        const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
+        lastTime = timestamp;
+
+        fastUpdate(dt);
+        render();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ========================================================================
+    // INIT
+    // ========================================================================
+    function init() {
+        // Load high score
+        state.highScore = parseInt(localStorage.getItem('vig_highscore') || '0');
+
+        resize();
+        window.addEventListener('resize', resize);
+
+        state.phase = GamePhase.MENU;
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    init();
+})();
+</script>
 </body>
 </html>
