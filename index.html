@@ -168,7 +168,7 @@
                     y: y,
                     vx: Math.cos(angle) * vel,
                     vy: Math.sin(angle) * vel,
-                    size: 3 + Math.random() * 4,
+                    size: 6 + Math.random() * 8,
                     color: color,
                     life: 0.5 + Math.random() * 0.3,
                     maxLife: 0.8,
@@ -180,11 +180,11 @@
         sparkUp(x, y, color, count) {
             for (let i = 0; i < count; i++) {
                 this.particles.push({
-                    x: x + (Math.random() - 0.5) * 20,
+                    x: x + (Math.random() - 0.5) * 40,
                     y: y,
-                    vx: (Math.random() - 0.5) * 50,
-                    vy: -100 - Math.random() * 100,
-                    size: 2 + Math.random() * 3,
+                    vx: (Math.random() - 0.5) * 80,
+                    vy: -150 - Math.random() * 150,
+                    size: 5 + Math.random() * 6,
                     color: color,
                     life: 0.4 + Math.random() * 0.4,
                     maxLife: 0.8,
@@ -271,33 +271,22 @@
 
     function resize() {
         const container = document.getElementById('game');
-        const maxW = container.clientWidth;
-        const maxH = container.clientHeight;
+        W = container.clientWidth;
+        H = container.clientHeight;
 
-        // Target 9:16 aspect ratio for mobile
-        const targetRatio = 9 / 16;
-        let w = maxW;
-        let h = maxH;
-
-        if (w / h > targetRatio) {
-            w = h * targetRatio;
-        } else {
-            h = w / targetRatio;
-        }
-
-        // Use integer scaling for pixel-perfect rendering
-        scale = Math.max(1, Math.floor(Math.min(w / 360, h / 640)));
-        W = Math.floor(360 * scale);
-        H = Math.floor(640 * scale);
-
+        // Simple: canvas fills the screen
         canvas.width = W;
         canvas.height = H;
-        canvas.style.width = W + 'px';
-        canvas.style.height = H + 'px';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
 
         centerX = W / 2;
-        centerY = H * 0.4;
-        ringRadius = Math.min(W, H) * 0.28;
+        centerY = H * 0.38;
+        ringRadius = Math.min(W, H) * 0.32;
+
+        // Scale factor for UI elements (base on screen width)
+        scale = Math.min(W / 400, H / 700) * 2;
+        scale = Math.max(scale, 1.5); // Minimum scale
 
         // Disable anti-aliasing for pixel art
         ctx.imageSmoothingEnabled = false;
@@ -409,9 +398,9 @@
                 id: 'start_mining',
                 text: 'START MINING',
                 x: centerX,
-                y: H * 0.75,
-                w: 200 * scale / 2,
-                h: 40 * scale / 2,
+                y: H * 0.85,
+                w: 220 * scale,
+                h: 55 * scale,
                 color: COLORS.primary,
                 action: startMining
             }
@@ -537,20 +526,20 @@
             {
                 id: 'cash_out',
                 text: 'END DAY',
-                x: centerX - 70 * scale / 2,
-                y: H * 0.65,
-                w: 120 * scale / 2,
-                h: 35 * scale / 2,
+                x: centerX - 90 * scale,
+                y: H * 0.78,
+                w: 150 * scale,
+                h: 50 * scale,
                 color: COLORS.success,
                 action: () => endDay(false)
             },
             {
                 id: 'continue',
-                text: 'KEEP MINING',
-                x: centerX + 70 * scale / 2,
-                y: H * 0.65,
-                w: 120 * scale / 2,
-                h: 35 * scale / 2,
+                text: 'CONTINUE',
+                x: centerX + 90 * scale,
+                y: H * 0.78,
+                w: 150 * scale,
+                h: 50 * scale,
                 color: COLORS.purple,
                 action: continueMining
             }
@@ -636,21 +625,25 @@
         // Build buttons for payday screen
         state.buttons = [];
 
-        let y = H * 0.35;
-        const btnH = 28 * scale / 2;
-        const spacing = 8 * scale / 2;
+        let y = H * 0.27;
+        const cardH = 70 * scale;
+        const cardW = W * 0.85;
+        const btnH = 40 * scale;
+        const btnW = 100 * scale;
 
         state.sharks.forEach((shark, i) => {
             const canPay = state.cash >= shark.demand;
             const paid = shark.mood === 'paid';
+            const cardY = y + i * (cardH + 15 * scale);
 
             if (!paid) {
+                // Buttons go below each card
                 state.buttons.push({
                     id: 'pay_' + i,
-                    text: 'PAY $' + shark.demand,
-                    x: centerX - 50 * scale / 2,
-                    y: y + i * (btnH + spacing + 30 * scale / 2),
-                    w: 80 * scale / 2,
+                    text: 'PAY',
+                    x: centerX - 60 * scale,
+                    y: cardY + cardH + 25 * scale,
+                    w: btnW,
                     h: btnH,
                     color: canPay ? COLORS.success : COLORS.textDim,
                     action: canPay ? () => payShark(i) : null
@@ -659,9 +652,9 @@
                 state.buttons.push({
                     id: 'skip_' + i,
                     text: 'SKIP',
-                    x: centerX + 50 * scale / 2,
-                    y: y + i * (btnH + spacing + 30 * scale / 2),
-                    w: 60 * scale / 2,
+                    x: centerX + 60 * scale,
+                    y: cardY + cardH + 25 * scale,
+                    w: btnW,
                     h: btnH,
                     color: COLORS.danger,
                     action: () => skipShark(i)
@@ -669,29 +662,32 @@
             }
         });
 
+        // Bottom buttons
+        const bottomY = H * 0.88;
+
         // New loan button
         const hasAvailableSharks = state.sharks.length < SHARKS.length;
         if (hasAvailableSharks) {
             state.buttons.push({
                 id: 'new_loan',
-                text: '+ NEW LOAN',
-                x: centerX,
-                y: H * 0.78,
-                w: 140 * scale / 2,
-                h: 32 * scale / 2,
+                text: '+ LOAN',
+                x: centerX - 100 * scale,
+                y: bottomY,
+                w: 130 * scale,
+                h: 45 * scale,
                 color: COLORS.warning,
                 action: takeLoan
             });
         }
 
-        // Next day button (only if all sharks handled or can proceed)
+        // Next day button
         state.buttons.push({
             id: 'next_day',
             text: 'NEXT DAY',
-            x: centerX,
-            y: H * 0.88,
-            w: 140 * scale / 2,
-            h: 36 * scale / 2,
+            x: hasAvailableSharks ? centerX + 100 * scale : centerX,
+            y: bottomY,
+            w: 160 * scale,
+            h: 45 * scale,
             color: COLORS.primary,
             action: nextDay
         });
@@ -714,9 +710,9 @@
                 id: 'restart',
                 text: 'TRY AGAIN',
                 x: centerX,
-                y: H * 0.75,
-                w: 160 * scale / 2,
-                h: 40 * scale / 2,
+                y: H * 0.80,
+                w: 200 * scale,
+                h: 55 * scale,
                 color: COLORS.primary,
                 action: startGame
             }];
@@ -828,9 +824,9 @@
             const alpha = Math.min(1, state.messageTimer * 2);
             ctx.globalAlpha = alpha;
             ctx.fillStyle = state.message.color;
-            ctx.font = `${14 * scale / 2}px 'Press Start 2P'`;
+            ctx.font = `${20 * scale}px 'Press Start 2P'`;
             ctx.textAlign = 'center';
-            ctx.fillText(state.message.text, centerX, centerY - ringRadius - 40 * scale / 2);
+            ctx.fillText(state.message.text, centerX, centerY - ringRadius - 50 * scale);
             ctx.globalAlpha = 1;
         }
 
@@ -840,29 +836,30 @@
     function renderMenu() {
         // Title
         ctx.fillStyle = COLORS.primary;
-        ctx.font = `${32 * scale / 2}px 'Press Start 2P'`;
+        ctx.font = `${48 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
         ctx.fillText('VIG', centerX, H * 0.3);
 
         // Subtitle
         ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
-        ctx.fillText('MINE CRYPTO. PAY SHARKS.', centerX, H * 0.38);
-        ctx.fillText('SURVIVE.', centerX, H * 0.42);
+        ctx.font = `${10 * scale}px 'Press Start 2P'`;
+        ctx.fillText('MINE CRYPTO. PAY SHARKS.', centerX, H * 0.40);
+        ctx.fillText('SURVIVE.', centerX, H * 0.45);
 
         // High score
         if (state.highScore > 0) {
             ctx.fillStyle = COLORS.purple;
-            ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.5);
+            ctx.font = `${12 * scale}px 'Press Start 2P'`;
+            ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.55);
         }
 
         // Start button
         renderButton({
             text: 'START',
             x: centerX,
-            y: H * 0.65,
-            w: 140 * scale / 2,
-            h: 40 * scale / 2,
+            y: H * 0.70,
+            w: 180 * scale,
+            h: 60 * scale,
             color: COLORS.primary
         });
 
@@ -870,9 +867,9 @@
             id: 'start',
             text: 'START',
             x: centerX,
-            y: H * 0.65,
-            w: 140 * scale / 2,
-            h: 40 * scale / 2,
+            y: H * 0.70,
+            w: 180 * scale,
+            h: 60 * scale,
             color: COLORS.primary,
             action: startGame
         }];
@@ -881,46 +878,48 @@
     function renderMorning() {
         // Header
         ctx.fillStyle = COLORS.text;
-        ctx.font = `${12 * scale / 2}px 'Press Start 2P'`;
+        ctx.font = `${18 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('DAY ' + state.day, centerX, H * 0.1);
+        ctx.fillText('DAY ' + state.day, centerX, H * 0.08);
 
         // Cash
         ctx.fillStyle = COLORS.success;
-        ctx.font = `${16 * scale / 2}px 'Press Start 2P'`;
-        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.18);
+        ctx.font = `${28 * scale}px 'Press Start 2P'`;
+        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.16);
 
         // Daily costs
         ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
-        let y = H * 0.28;
+        ctx.font = `${11 * scale}px 'Press Start 2P'`;
+        let y = H * 0.26;
         ctx.fillText('DAILY COSTS:', centerX, y);
 
         ctx.fillStyle = COLORS.danger;
-        y += 20 * scale / 2;
+        ctx.font = `${10 * scale}px 'Press Start 2P'`;
+        y += 28 * scale;
         ctx.fillText('ELECTRICITY: -$' + state.electricityCost, centerX, y);
-        y += 15 * scale / 2;
+        y += 22 * scale;
         ctx.fillText('RIG DECAY: -$' + state.rigDecay, centerX, y);
 
         // Shark payments due
-        y += 30 * scale / 2;
+        y += 40 * scale;
         ctx.fillStyle = COLORS.textDim;
+        ctx.font = `${11 * scale}px 'Press Start 2P'`;
         ctx.fillText('SHARKS WANT:', centerX, y);
 
         const totalOwed = state.sharks.reduce((sum, s) => sum + s.demand, 0);
-        y += 18 * scale / 2;
+        y += 28 * scale;
         ctx.fillStyle = COLORS.warning;
-        ctx.font = `${12 * scale / 2}px 'Press Start 2P'`;
+        ctx.font = `${22 * scale}px 'Press Start 2P'`;
         ctx.fillText('$' + totalOwed, centerX, y);
 
         // Mining info
-        y += 40 * scale / 2;
+        y += 50 * scale;
         ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${7 * scale / 2}px 'Press Start 2P'`;
+        ctx.font = `${9 * scale}px 'Press Start 2P'`;
         ctx.fillText('HASH CHANCE: ' + Math.floor(state.hashChance * 100) + '%', centerX, y);
-        y += 14 * scale / 2;
+        y += 22 * scale;
         ctx.fillText('HASHES/BLOCK: ' + state.hashesNeeded, centerX, y);
-        y += 14 * scale / 2;
+        y += 22 * scale;
         ctx.fillText('VIG PRICE: $' + Math.floor(state.vigPrice), centerX, y);
 
         // Render buttons
@@ -928,39 +927,46 @@
     }
 
     function renderMining() {
-        // Header
-        ctx.fillStyle = COLORS.text;
-        ctx.font = `${10 * scale / 2}px 'Press Start 2P'`;
-        ctx.textAlign = 'center';
-        ctx.fillText('DAY ' + state.day, centerX, 25 * scale / 2);
+        // Header bar
+        const headerY = 35 * scale;
 
-        // Cash
+        // Cash (left)
         ctx.fillStyle = COLORS.success;
-        ctx.font = `${12 * scale / 2}px 'Press Start 2P'`;
-        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX - 80 * scale / 2, 25 * scale / 2);
+        ctx.font = `${14 * scale}px 'Press Start 2P'`;
+        ctx.textAlign = 'left';
+        ctx.fillText('$' + Math.floor(state.cashDisplay), 20 * scale, headerY);
 
-        // VIG
+        // Day (center)
+        ctx.fillStyle = COLORS.text;
+        ctx.font = `${12 * scale}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText('DAY ' + state.day, centerX, headerY);
+
+        // VIG (right)
         ctx.fillStyle = COLORS.primary;
-        ctx.fillText(state.vigDisplay.toFixed(2) + ' VIG', centerX + 80 * scale / 2, 25 * scale / 2);
+        ctx.font = `${14 * scale}px 'Press Start 2P'`;
+        ctx.textAlign = 'right';
+        ctx.fillText(state.vigDisplay.toFixed(2) + ' VIG', W - 20 * scale, headerY);
 
         // Strikes
-        ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = COLORS.text;
+        ctx.font = `${16 * scale}px 'Press Start 2P'`;
         let strikeText = '';
         for (let i = 0; i < state.maxStrikes; i++) {
             strikeText += i < state.strikes ? '✗ ' : '○ ';
         }
-        ctx.fillText(strikeText, centerX, 45 * scale / 2);
+        ctx.fillText(strikeText, centerX, 65 * scale);
 
         // Draw pixel ring
-        drawPixelRing(centerX, centerY, ringRadius, COLORS.bgLight, 8);
+        drawPixelRing(centerX, centerY, ringRadius, COLORS.bgLight, 12 * scale);
 
         // Draw target zone
         drawPixelArc(
             centerX, centerY, ringRadius,
             state.targetAngle,
             state.targetAngle + Math.PI * 2 * state.targetSize,
-            COLORS.primary, 10
+            COLORS.primary, 16 * scale
         );
 
         // Draw spinner
@@ -973,7 +979,7 @@
                 const trailAngle = state.angle - i * 0.1;
                 const tx = centerX + Math.cos(trailAngle) * ringRadius;
                 const ty = centerY + Math.sin(trailAngle) * ringRadius;
-                const size = (12 - i * 2) * scale / 2;
+                const size = (20 - i * 3) * scale;
                 ctx.fillStyle = COLORS.text;
                 ctx.globalAlpha = (5 - i) / 5 * 0.5;
                 ctx.fillRect(
@@ -986,7 +992,7 @@
             ctx.globalAlpha = 1;
 
             // Main dot
-            const dotSize = 14 * scale / 2;
+            const dotSize = 24 * scale;
             ctx.fillStyle = COLORS.text;
             ctx.fillRect(
                 Math.floor(spinX - dotSize/2),
@@ -997,17 +1003,17 @@
         }
 
         // Hash progress
-        const progressY = centerY + ringRadius + 40 * scale / 2;
+        const progressY = centerY + ringRadius + 50 * scale;
         ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        ctx.font = `${12 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
         ctx.fillText('HASHES: ' + state.hashesFound + '/' + state.hashesNeeded, centerX, progressY);
 
         // Progress bar
-        const barW = 150 * scale / 2;
-        const barH = 10 * scale / 2;
+        const barW = W * 0.7;
+        const barH = 20 * scale;
         const barX = centerX - barW / 2;
-        const barY = progressY + 10 * scale / 2;
+        const barY = progressY + 15 * scale;
 
         ctx.fillStyle = COLORS.bgLight;
         ctx.fillRect(barX, barY, barW, barH);
@@ -1016,18 +1022,23 @@
         ctx.fillStyle = COLORS.primary;
         ctx.fillRect(barX, barY, barW * progress, barH);
 
+        // Border
+        ctx.strokeStyle = COLORS.textDim;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(barX, barY, barW, barH);
+
         // Last hash
         if (state.lastHash) {
             ctx.fillStyle = state.lastHashValid ? COLORS.success : COLORS.textDim;
-            ctx.font = `${7 * scale / 2}px 'Press Start 2P'`;
-            ctx.fillText(state.lastHash + (state.lastHashValid ? ' ✓' : ' ✗'), centerX, barY + 30 * scale / 2);
+            ctx.font = `${11 * scale}px 'Press Start 2P'`;
+            ctx.fillText(state.lastHash + (state.lastHashValid ? ' ✓' : ' ✗'), centerX, barY + barH + 30 * scale);
         }
 
         // Tap prompt
         if (state.isSpinning) {
             ctx.fillStyle = COLORS.textMuted;
-            ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
-            ctx.fillText('TAP TO HASH', centerX, H * 0.85);
+            ctx.font = `${14 * scale}px 'Press Start 2P'`;
+            ctx.fillText('TAP TO HASH', centerX, H * 0.90);
         }
 
         // Render buttons (for choice screen)
@@ -1037,54 +1048,59 @@
     function renderPaydayScreen() {
         // Header
         ctx.fillStyle = COLORS.warning;
-        ctx.font = `${14 * scale / 2}px 'Press Start 2P'`;
+        ctx.font = `${22 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('PAYDAY', centerX, H * 0.08);
+        ctx.fillText('PAYDAY', centerX, H * 0.07);
 
         // Cash
         ctx.fillStyle = COLORS.success;
-        ctx.font = `${18 * scale / 2}px 'Press Start 2P'`;
-        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.16);
+        ctx.font = `${28 * scale}px 'Press Start 2P'`;
+        ctx.fillText('$' + Math.floor(state.cashDisplay), centerX, H * 0.14);
 
         // Blocks mined
         ctx.fillStyle = COLORS.textDim;
-        ctx.font = `${7 * scale / 2}px 'Press Start 2P'`;
-        ctx.fillText('BLOCKS MINED TODAY: ' + state.blocksMinedToday, centerX, H * 0.22);
+        ctx.font = `${10 * scale}px 'Press Start 2P'`;
+        ctx.fillText('BLOCKS MINED: ' + state.blocksMinedToday, centerX, H * 0.20);
 
         // Sharks
-        let y = H * 0.30;
+        let y = H * 0.27;
+        const cardH = 70 * scale;
+        const cardW = W * 0.85;
+
         state.sharks.forEach((shark, i) => {
-            const cardY = y + i * (60 * scale / 2);
+            const cardY = y + i * (cardH + 15 * scale);
 
             // Shark card background
             ctx.fillStyle = shark.mood === 'angry' ? '#2a1515' :
                            shark.mood === 'warning' ? '#2a2215' : '#1a1a1a';
-            ctx.fillRect(centerX - 120 * scale / 2, cardY - 15 * scale / 2, 240 * scale / 2, 50 * scale / 2);
+            ctx.fillRect(centerX - cardW/2, cardY, cardW, cardH);
 
             // Border
             ctx.strokeStyle = shark.mood === 'angry' ? COLORS.danger :
                              shark.mood === 'warning' ? COLORS.warning : COLORS.textDim;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(centerX - 120 * scale / 2, cardY - 15 * scale / 2, 240 * scale / 2, 50 * scale / 2);
+            ctx.lineWidth = 3;
+            ctx.strokeRect(centerX - cardW/2, cardY, cardW, cardH);
 
             // Name
             ctx.fillStyle = COLORS.text;
-            ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+            ctx.font = `${12 * scale}px 'Press Start 2P'`;
             ctx.textAlign = 'left';
-            ctx.fillText(shark.name.toUpperCase(), centerX - 110 * scale / 2, cardY + 2 * scale / 2);
+            ctx.fillText(shark.name.toUpperCase(), centerX - cardW/2 + 15 * scale, cardY + 28 * scale);
 
             // Strikes
             let strikes = '';
             for (let j = 0; j < 3; j++) {
-                strikes += j < shark.strikes ? '✗' : '○';
+                strikes += j < shark.strikes ? '✗ ' : '○ ';
             }
             ctx.fillStyle = shark.strikes >= 2 ? COLORS.danger : COLORS.textDim;
-            ctx.fillText(strikes, centerX - 110 * scale / 2, cardY + 18 * scale / 2);
+            ctx.font = `${14 * scale}px 'Press Start 2P'`;
+            ctx.fillText(strikes, centerX - cardW/2 + 15 * scale, cardY + 52 * scale);
 
             // Demand
             ctx.fillStyle = COLORS.success;
+            ctx.font = `${16 * scale}px 'Press Start 2P'`;
             ctx.textAlign = 'right';
-            ctx.fillText('$' + shark.demand, centerX + 110 * scale / 2, cardY + 2 * scale / 2);
+            ctx.fillText('$' + shark.demand, centerX + cardW/2 - 15 * scale, cardY + 40 * scale);
         });
 
         // Render buttons
@@ -1093,20 +1109,21 @@
 
     function renderGameOver() {
         ctx.fillStyle = COLORS.danger;
-        ctx.font = `${20 * scale / 2}px 'Press Start 2P'`;
+        ctx.font = `${32 * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', centerX, H * 0.25);
+        ctx.fillText('GAME OVER', centerX, H * 0.22);
 
         // Stats
         ctx.fillStyle = COLORS.text;
-        ctx.font = `${10 * scale / 2}px 'Press Start 2P'`;
-        ctx.fillText('DAYS SURVIVED: ' + state.totalDaysSurvived, centerX, H * 0.4);
-        ctx.fillText('BLOCKS MINED: ' + state.totalBlocksMined, centerX, H * 0.48);
-        ctx.fillText('SHARKS FACED: ' + state.sharks.length, centerX, H * 0.56);
+        ctx.font = `${14 * scale}px 'Press Start 2P'`;
+        ctx.fillText('DAYS SURVIVED: ' + state.totalDaysSurvived, centerX, H * 0.38);
+        ctx.fillText('BLOCKS MINED: ' + state.totalBlocksMined, centerX, H * 0.46);
+        ctx.fillText('SHARKS FACED: ' + state.sharks.length, centerX, H * 0.54);
 
         // High score
         ctx.fillStyle = COLORS.purple;
-        ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.66);
+        ctx.font = `${16 * scale}px 'Press Start 2P'`;
+        ctx.fillText('BEST: ' + state.highScore + ' DAYS', centerX, H * 0.65);
 
         // Render buttons
         state.buttons.forEach(renderButton);
@@ -1117,9 +1134,15 @@
         ctx.fillStyle = btn.color || COLORS.primary;
         ctx.fillRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
 
-        // Text
-        ctx.fillStyle = COLORS.bg;
-        ctx.font = `${8 * scale / 2}px 'Press Start 2P'`;
+        // Border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
+
+        // Text - size based on button height
+        const fontSize = Math.max(8, Math.min(14, btn.h / 4));
+        ctx.fillStyle = '#000';
+        ctx.font = `${fontSize * scale}px 'Press Start 2P'`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(btn.text, btn.x, btn.y);
